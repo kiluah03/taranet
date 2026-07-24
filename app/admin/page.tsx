@@ -1,0 +1,16 @@
+import type { Metadata } from "next";
+import { ArrowRight, Check, Clock3, MoreHorizontal, UserPlus, Users } from "lucide-react";
+import { DashboardShell, Metric } from "../ui/dashboard-shell";
+
+export const metadata: Metadata = { title: "Admin console" };
+const signups=[["Maria Santos","Fibre Max 1G","Auckland","12 min ago","READY"],["Paolo Reyes","Fibre 500","Hamilton","38 min ago","REVIEW"],["Liza Mendoza","Business Max","Wellington","1 hr ago","READY"],["Carlo Bautista","Fibre 500","Christchurch","2 hrs ago","REVIEW"]];
+
+export default function AdminPage(){
+ return <DashboardShell admin><div className="dash-content">
+  <div className="welcome"><div><p className="eyebrow">FRIDAY, 24 JULY</p><h1>Operations overview</h1><p>Here’s what’s happening across TARA.NET today.</p></div><button className="button"><UserPlus size={17}/> Add customer</button></div>
+  <div className="metrics"><Metric label="ACTIVE CUSTOMERS" value="1,284" detail="+4.8% this month"/><Metric label="MONTHLY REVENUE" value="$126.8K" detail="+6.2% this month" tone="gold"/><Metric label="PENDING SIGNUPS" value="18" detail="6 need review" tone="coral"/><Metric label="NETWORK UPTIME" value="99.99%" detail="All systems normal" tone="green"/></div>
+  <div className="admin-grid"><article className="dash-card signups"><div className="card-head"><span>PENDING SIGNUP APPROVALS</span><button>View all <ArrowRight/></button></div><div className="table-head"><span>CUSTOMER</span><span>PLAN</span><span>LOCATION</span><span>RECEIVED</span><span>STATUS</span><span/></div>{signups.map((r)=><div className="table-row" key={r[0]}><span><i>{r[0].split(" ").map(x=>x[0]).join("")}</i><b>{r[0]}</b></span><span>{r[1]}</span><span>{r[2]}</span><span>{r[3]}</span><em className={r[4]==="READY"?"ready":"review"}>{r[4]}</em><button><MoreHorizontal/></button></div>)}</article>
+  <article className="dash-card activity"><div className="card-head"><span>LIVE ACTIVITY</span><i className="live-dot"/></div><div><i className="green"><Check/></i><span><b>Service activated</b>Maria Cruz · Fibre Max 1G<small>4 min ago</small></span></div><div><i><Users/></i><span><b>New application</b>Ramon Diaz · Auckland<small>12 min ago</small></span></div><div><i className="gold"><Clock3/></i><span><b>Ticket escalated</b>#SUP-1841 · Packet loss<small>26 min ago</small></span></div><button className="ghost-button">View audit log</button></article></div>
+  <div className="admin-grid lower"><article className="dash-card network-card"><div className="card-head"><span>NETWORK HEALTH</span><span className="online"><i/> ALL SYSTEMS OPERATIONAL</span></div><div className="network-metrics"><div><span>AUCKLAND POP</span><strong>12%</strong><small>Utilisation</small></div><div><span>WELLINGTON POP</span><strong>9%</strong><small>Utilisation</small></div><div><span>CHRISTCHURCH POP</span><strong>14%</strong><small>Utilisation</small></div><div><span>INTL ROUTE</span><strong>42 ms</strong><small>NZ → PH</small></div></div></article><article className="dash-card"><div className="card-head"><span>SUPPORT QUEUE</span><button>Open queue</button></div><div className="support-num"><strong>7</strong><span>open tickets<small>2 high priority</small></span></div><div className="support-bar"><i/></div><p className="muted">Median first response: <b>4m 12s</b></p></article></div>
+ </div></DashboardShell>
+}
