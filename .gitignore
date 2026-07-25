@@ -23,6 +23,8 @@
 *.pem
 .dev-out.log
 .dev-err.log
+.local-dev-out.log
+.local-dev-err.log
 
 # debug
 npm-debug.log*

@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight, Check, ChevronRight, Heart, House, MapPin, MessageCircleHeart, Router, ShieldCheck, Sparkles, Star, Users, Wifi, X } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Brand } from "./brand";
@@ -53,10 +54,20 @@ export function HomeExperience() {
           <div className="hero-trust"><span><Check/> No fixed term</span><span><Check/> Unlimited data</span><span><Check/> Pamilya-friendly support</span></div>
         </motion.div>
         <motion.div className="family-scene" initial={reduce?false:{opacity:0,scale:.94}} animate={{opacity:1,scale:1}} transition={{duration:.8,delay:.15}}>
-          <div className="scene-sun">☀</div><div className="scene-fern">✦</div>
-          <div className="family-card"><div className="family-portrait"><span>👨‍👩‍👧‍👦</span></div><div><small>CONNECTED FROM AUCKLAND</small><strong>Sunday with Lola</strong><p><i/> Manila · crystal clear</p></div></div>
-          <div className="speed-chip"><Wifi/><span><b>950 Mbps</b>Family-ready fibre</span></div>
-          <div className="hero-note"><Heart/> Built with puso. Backed in NZ.</div>
+          <motion.div className="scene-sun" animate={reduce?{}:{rotate:[0,8,0],scale:[1,1.06,1]}} transition={{duration:6,repeat:Infinity,ease:"easeInOut"}}>☀</motion.div>
+          <motion.div className="scene-fern" animate={reduce?{}:{rotate:[-20,-16,-20],y:[0,-8,0]}} transition={{duration:5,repeat:Infinity,ease:"easeInOut"}}>✦</motion.div>
+          <motion.div className="family-card" animate={reduce?{}:{y:[0,-9,0],rotate:[0,-.35,0]}} transition={{duration:6,repeat:Infinity,ease:"easeInOut"}}>
+            <div className="family-portrait">
+              <motion.div className="family-photo-motion" animate={reduce?{}:{scale:[1,1.045,1],x:[0,-5,0]}} transition={{duration:9,repeat:Infinity,ease:"easeInOut"}}>
+                <Image src="/hero-family-v1.png" alt="A smiling Filipino family enjoying a video call together at home" fill priority sizes="(max-width: 900px) 90vw, 42vw"/>
+              </motion.div>
+              <div className="family-photo-glow" aria-hidden="true"/>
+            </div>
+            <div><small>CONNECTED FROM AUCKLAND</small><strong>Sunday with Lola</strong><p><i/> Manila · crystal clear</p></div>
+          </motion.div>
+          <motion.div className="speed-chip" animate={reduce?{}:{y:[0,7,0],x:[0,-3,0]}} transition={{duration:4.2,repeat:Infinity,ease:"easeInOut",delay:.5}}><Wifi/><span><b>950 Mbps</b>Family-ready fibre</span></motion.div>
+          <motion.div className="hero-note" animate={reduce?{}:{y:[0,-6,0]}} transition={{duration:3.8,repeat:Infinity,ease:"easeInOut"}}><Heart/> Built with puso. Backed in NZ.</motion.div>
+          <div className="signal-ring signal-ring-one" aria-hidden="true"/><div className="signal-ring signal-ring-two" aria-hidden="true"/>
         </motion.div>
       </div>
       <div className="community-strip"><span>Trusted by growing Filipino communities in</span><b>Auckland</b><i/> <b>Wellington</b><i/> <b>Christchurch</b><i/> <b>Hamilton</b></div>

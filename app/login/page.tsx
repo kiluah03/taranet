@@ -12,6 +12,7 @@ function LoginForm() {
   const router = useRouter();
   const [signup, setSignup] = useState(params.get("mode") === "signup");
   const [busy, setBusy] = useState(false);
+  const [socialBusy, setSocialBusy] = useState<"google" | "facebook" | null>(null);
   const [message, setMessage] = useState("");
   const supabase = useMemo(() => createAuthBrowserClient(), []);
   const nextPath = params.get("next")?.startsWith("/") ? params.get("next")! : "/portal";
@@ -51,6 +52,21 @@ function LoginForm() {
     setBusy(false);
   }
 
+  async function signInWithSocial(provider: "google" | "facebook") {
+    setSocialBusy(provider);
+    setMessage("");
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo },
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setSocialBusy(null);
+    }
+  }
+
   return (
     <main className="auth-page">
       <section className="auth-card">
@@ -62,6 +78,27 @@ function LoginForm() {
             ? "Use the same email as your fibre application so we can link it automatically."
             : "Sign in to manage your service, billing, rewards, and support."}
         </p>
+        <div className="social-auth" aria-label="Social sign in options">
+          <button
+            type="button"
+            className="social-auth-button"
+            onClick={() => signInWithSocial("google")}
+            disabled={busy || socialBusy !== null}
+          >
+            <span className="social-auth-icon google" aria-hidden="true">G</span>
+            {socialBusy === "google" ? "Connecting…" : "Continue with Google"}
+          </button>
+          <button
+            type="button"
+            className="social-auth-button"
+            onClick={() => signInWithSocial("facebook")}
+            disabled={busy || socialBusy !== null}
+          >
+            <span className="social-auth-icon facebook" aria-hidden="true">f</span>
+            {socialBusy === "facebook" ? "Connecting…" : "Continue with Facebook"}
+          </button>
+        </div>
+        <div className="auth-divider"><span>or continue with email</span></div>
         <form onSubmit={submit}>
           {signup && (
             <>
@@ -72,7 +109,7 @@ function LoginForm() {
           <label>Email<input name="email" type="email" required autoComplete="email" defaultValue={params.get("email") ?? ""} /></label>
           <label>Password<input name="password" type="password" minLength={8} required autoComplete={signup ? "new-password" : "current-password"} /></label>
           {message && <div className="auth-message"><CheckCircle2 size={17} />{message}</div>}
-          <button className="button full" disabled={busy}>
+          <button className="button full" disabled={busy || socialBusy !== null}>
             {busy ? "Please wait…" : signup ? "Create account" : "Sign in"} <ArrowRight size={17} />
           </button>
         </form>
