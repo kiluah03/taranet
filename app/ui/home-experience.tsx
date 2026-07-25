@@ -49,7 +49,7 @@ export function HomeExperience() {
         <Brand />
         <nav className={nav ? "nav open" : "nav"}>
           <a href="#plans">Plans</a><a href="#network">Why TARA</a><a href="#rewards">Rewards</a>
-          <Link href="/portal" className="nav-login">Customer login</Link>
+          <Link href="/login" className="nav-login">Customer login</Link>
           <a href="#plans" className="button button-small">Check my address <ArrowRight size={15} /></a>
         </nav>
         <button className="menu-button" onClick={() => setNav(!nav)} aria-label="Toggle menu">{nav ? <X /> : <Menu />}</button>
@@ -127,7 +127,7 @@ export function HomeExperience() {
       </section>
 
       <section className="final-cta"><div className="sun" /><p className="eyebrow">Ready when you are</p><h2>Tara, connect na.</h2><p>Join the KiwiNoys getting more from their fibre.</p><button className="button" onClick={() => setWizard(true)}>Check your address <ArrowRight /></button></section>
-      <footer><Brand /><p>Fibre that feels like home.</p><div><Link href="/portal">Customer portal</Link><Link href="/admin">Admin</Link><a href="#plans">Plans</a></div><small>© 2026 TARA.NET Ltd · New Zealand</small></footer>
+      <footer><Brand /><p>Fibre that feels like home.</p><div><Link href="/login">Customer portal</Link><Link href="/admin">Admin</Link><a href="#plans">Plans</a></div><small>© 2026 TARA.NET Ltd · New Zealand</small></footer>
 
       <AnimatePresence>{wizard && <motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setWizard(false)}>
         <motion.div className="wizard" initial={{opacity:0, y:30, scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:20}} onClick={e => e.stopPropagation()}>
@@ -138,7 +138,7 @@ export function HomeExperience() {
           {step === 1 && !submitted && <div className="wizard-body"><div className="success-icon"><Check /></div><h3>Great news—we cover your area.</h3><p>We’ll confirm the exact fibre connection during review.</p><label>Installation address<input value={address} onChange={e=>setAddress(e.target.value)} placeholder="12 Example Street, Auckland" /></label><button className="button full" onClick={() => setStep(2)}>Choose a plan <ChevronRight /></button></div>}
           {step === 2 && !submitted && <div className="wizard-body"><p className="eyebrow">Pick your bilis</p><h3>Which speed feels right?</h3>{plans[segment].map((p,i)=><button key={p.name} className={`wizard-plan ${selected===i?"selected":""}`} onClick={()=>setSelected(i)}><span><strong>{p.name}</strong><small>{p.speed} Mbps</small></span><b>${p.price}/mo</b></button>)}<label className="mini-check"><input type="checkbox" checked={router} onChange={e=>setRouter(e.target.checked)} /> Add WiFi 6 router (+$10/mo)</label><button className="button full" onClick={() => setStep(3)}>Your details <ChevronRight /></button></div>}
           {step === 3 && !submitted && <form className="wizard-body" onSubmit={async e=>{e.preventDefault();const form=new FormData(e.currentTarget);const response=await fetch("/api/applications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({address:address||"Address pending manual review",planCode:segment==="business"?(selected?"business-max":"business-500"):(selected?"fibre-max":"fibre-500"),firstName:form.get("firstName"),lastName:form.get("lastName"),email:form.get("email"),mobile:form.get("mobile"),router})});const result=await response.json();if(response.ok){setReference(result.reference);setSubmitted(true)}}}><p className="eyebrow">Almost there</p><h3>Let’s get you connected.</h3><div className="two-fields"><label>First name<input name="firstName" required placeholder="Juan" /></label><label>Last name<input name="lastName" required placeholder="Dela Cruz" /></label></div><label>Email<input name="email" type="email" required placeholder="juan@example.nz" /></label><label>Mobile<input name="mobile" required placeholder="021 555 0123" /></label><label className="mini-check"><input type="checkbox" required /> I agree to the service terms and privacy policy.</label><button className="button full">Submit application <ArrowRight /></button></form>}
-          {submitted && <div className="wizard-body complete"><div className="success-icon"><Check /></div><p className="eyebrow">Application received</p><h3>Salamat! We’ll take it from here.</h3><p>Your reference is <strong>{reference}</strong>. We’ll email the next steps within one business day.</p><Link className="button full" href="/portal">View customer portal <ArrowRight /></Link></div>}
+          {submitted && <div className="wizard-body complete"><div className="success-icon"><Check /></div><p className="eyebrow">Application received</p><h3>Salamat! We’ll take it from here.</h3><p>Your reference is <strong>{reference}</strong>. Create an account with the same email to track it.</p><Link className="button full" href="/login?mode=signup">Create customer account <ArrowRight /></Link></div>}
         </motion.div>
       </motion.div>}</AnimatePresence>
     </main>
