@@ -16,3 +16,4 @@
 .auth-home{color:#64748b}
 .support-form{margin-top:15px;border-top:1px solid var(--line);padding-top:4px}
 html{scroll-padding-top:90px}
+.admin-list{display:flex;flex-direction:column}.admin-record{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;gap:16px;align-items:center;padding:15px 0;border-top:1px solid var(--line)}.admin-record strong,.admin-record small{display:block}.admin-record strong{font-size:12px}.admin-record small{color:#64748b;font-size:9px;margin-top:4px}.admin-record em{font-style:normal;text-transform:uppercase;font-size:8px}.admin-actions{display:flex;align-items:center;gap:6px}.admin-actions button,.admin-actions select{border:1px solid #334155;background:#101a2a;color:#cbd5e1;padding:7px 9px;border-radius:7px;font-size:9px}.admin-actions button.primary{background:var(--gold);color:#07101d;border-color:var(--gold)}@media(max-width:700px){.admin-record{grid-template-columns:1fr}.admin-actions{flex-wrap:wrap}}

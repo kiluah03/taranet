@@ -14,6 +14,7 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const supabase = useMemo(() => createAuthBrowserClient(), []);
+  const nextPath = params.get("next")?.startsWith("/") ? params.get("next")! : "/portal";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,7 +27,7 @@ function LoginForm() {
     if (signup) {
       const fullName = String(form.get("fullName") ?? "");
       const mobile = String(form.get("mobile") ?? "");
-      const redirectTo = `${window.location.origin}/auth/callback?next=/portal`;
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -34,7 +35,7 @@ function LoginForm() {
       });
       if (error) setMessage(error.message);
       else if (data.session) {
-        router.replace("/portal");
+        router.replace(nextPath);
         router.refresh();
       } else {
         setMessage("Check your email and confirm your account, then sign in.");
@@ -43,7 +44,7 @@ function LoginForm() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setMessage(error.message);
       else {
-        router.replace("/portal");
+        router.replace(nextPath);
         router.refresh();
       }
     }
