@@ -1,146 +1,93 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import {
-  ArrowRight, Check, ChevronRight, Gamepad2, Gift, Globe2,
-  Headphones, House, Menu, Router, ShieldCheck, Sparkles, Video, X,
-} from "lucide-react";
+import { ArrowRight, Check, ChevronRight, Heart, House, MapPin, MessageCircleHeart, Router, ShieldCheck, Sparkles, Star, Users, Wifi, X } from "lucide-react";
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
-import { Brand, StatusPill } from "./brand";
+import { FormEvent, useState } from "react";
+import { Brand } from "./brand";
+import { LandingButton, LandingCard, LandingFooter, LandingHeader } from "./landing-shared";
 
-const plans = {
-  residential: [
-    { name: "Fibre 500", speed: "500/100", price: 85, note: "Everything your whānau needs.", featured: false },
-    { name: "Fibre Max 1G", speed: "950/500", price: 99, note: "Maximum speed. Zero compromise.", featured: true },
-  ],
-  business: [
-    { name: "Bayanihan Business", speed: "500/500", price: 129, note: "Symmetrical speed for growing teams.", featured: false },
-    { name: "Business Max", speed: "950/500", price: 169, note: "Priority support and static IP.", featured: true },
-  ],
-};
+const plans = [
+  { code:"fibre-500", name:"Fibre 500", speed:"500 / 100", price:85, note:"Perfect for everyday family life.", featured:false },
+  { code:"fibre-max", name:"Fibre Max 1G", speed:"950 / 500", price:99, note:"For busy homes that do everything.", featured:true },
+];
+const highlights = [
+  { icon:Heart, eyebrow:"Pamilya first", title:"Connection that feels close", body:"Reliable video calls, streaming, study, and work—so the people you love never feel far away." },
+  { icon:ShieldCheck, eyebrow:"Tiwala", title:"Honest Kiwi service", body:"Simple pricing, no confusing contracts, and friendly support from people who understand your journey." },
+  { icon:Users, eyebrow:"Bayanihan", title:"Community in Aotearoa", body:"Refer your barkada and earn monthly credits while helping another family feel at home." },
+];
+const stories = [
+  { quote:"Our Sunday calls to Manila are finally crystal clear—even when the kids are streaming. Parang nasa tabi lang namin sila.", name:"The Santos family", place:"Auckland", initials:"MS" },
+  { quote:"The setup was easy and the support team spoke to us like family. We felt looked after from day one.", name:"Paolo & Anne", place:"Wellington", initials:"PA" },
+  { quote:"Fast for work, gaming, and keeping our lola connected. TARA really understands Kiwi-Filipino homes.", name:"The Reyes family", place:"Christchurch", initials:"TR" },
+];
+
+const reveal = { initial:{opacity:0,y:28}, whileInView:{opacity:1,y:0}, viewport:{once:true,margin:"-80px"}, transition:{duration:.55} };
 
 export function HomeExperience() {
   const reduce = useReducedMotion();
-  const [nav, setNav] = useState(false);
-  const [segment, setSegment] = useState<keyof typeof plans>("residential");
-  const [address, setAddress] = useState("");
-  const [checking, setChecking] = useState(false);
-  const [wizard, setWizard] = useState(false);
-  const [step, setStep] = useState(1);
-  const [selected, setSelected] = useState(1);
-  const [router, setRouter] = useState(true);
-  const [referrals, setReferrals] = useState(3);
-  const [submitted, setSubmitted] = useState(false);
-  const [reference, setReference] = useState("TARA-260724");
+  const [wizard,setWizard]=useState(false);
+  const [step,setStep]=useState(1);
+  const [address,setAddress]=useState("");
+  const [selected,setSelected]=useState(1);
+  const [router,setRouter]=useState(true);
+  const [submitted,setSubmitted]=useState(false);
+  const [reference,setReference]=useState("");
+  const [error,setError]=useState("");
+  const [busy,setBusy]=useState(false);
 
-  const check = (e: FormEvent) => {
-    e.preventDefault();
-    if (!address.trim()) return;
-    setChecking(true);
-    window.setTimeout(() => { setChecking(false); setWizard(true); setStep(1); }, 750);
-  };
+  function begin(plan=1){setSelected(plan);setStep(address?2:1);setWizard(true);setSubmitted(false);setError("");}
+  function addressSubmit(e:FormEvent){e.preventDefault();if(address.trim()) begin();}
 
-  const savings = useMemo(() => referrals * 7, [referrals]);
-
-  return (
-    <main>
-      <header className="topbar">
-        <Brand />
-        <nav className={nav ? "nav open" : "nav"}>
-          <a href="#plans">Plans</a><a href="#network">Why TARA</a><a href="#rewards">Rewards</a>
-          <Link href="/login" className="nav-login">Customer login</Link>
-          <a href="#plans" className="button button-small">Check my address <ArrowRight size={15} /></a>
-        </nav>
-        <button className="menu-button" onClick={() => setNav(!nav)} aria-label="Toggle menu">{nav ? <X /> : <Menu />}</button>
-      </header>
-
-      <section className="hero">
-        <div className="hero-grid" />
-        <div className="aurora aurora-one" /><div className="aurora aurora-two" />
-        <div className="connection-line"><span /><i /><b /></div>
-        <div className="hero-inner">
-          <motion.div className="hero-copy" initial={reduce ? false : { opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .7 }}>
-            <StatusPill />
-            <p className="eyebrow">Aotearoa’s first Filipino ISP</p>
-            <h1>Fibre that feels<br />like <span>home.</span></h1>
-            <p className="hero-lead">Ultra-fast, reliable internet made for KiwiNoys. Stream, game, work, and stay close to the Philippines—without the lag.</p>
-            <form className="address-check" onSubmit={check}>
-              <House size={20} />
-              <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Enter your New Zealand address" aria-label="New Zealand address" />
-              <button disabled={checking}>{checking ? "Checking…" : "Check availability"} <ArrowRight size={17} /></button>
-            </form>
-            <p className="helper"><ShieldCheck size={15} /> No contracts · KiwiNoy support · Setup from $0</p>
-          </motion.div>
-          <motion.div className="hero-orbit" initial={reduce ? false : { opacity: 0, scale: .9 }} animate={{ opacity: 1, scale: 1 }}>
-            <div className="orbit-ring ring-a" /><div className="orbit-ring ring-b" />
-            <div className="nz-node">NZ<span>Auckland</span></div>
-            <div className="ph-node">PH<span>Manila</span></div>
-            <div className="latency-card"><span>NZ → PH</span><strong>42<small>ms</small></strong><em>Optimised route</em></div>
-          </motion.div>
-        </div>
-        <div className="stat-strip">
-          <div><strong>1 Gbps</strong><span>Pure fibre speed</span></div>
-          <div><strong>99.99%</strong><span>Network uptime</span></div>
-          <div><strong>24 / 7</strong><span>KiwiNoy support</span></div>
-          <div><strong>4.9 ★</strong><span>Customer love</span></div>
-        </div>
-      </section>
-
-      <section id="plans" className="section plans-section">
-        <div className="section-heading">
-          <div><p className="eyebrow">Simple, honest pricing</p><h2>Choose your bilis.</h2><p>Premium fibre without the confusing fine print.</p></div>
-          <div className="toggle">{(["residential", "business"] as const).map(x => <button key={x} className={segment === x ? "active" : ""} onClick={() => setSegment(x)}>{x}</button>)}</div>
-        </div>
-        <div className="plan-grid">
-          {plans[segment].map((plan, i) => (
-            <motion.article key={plan.name} className={`plan-card ${plan.featured ? "featured" : ""}`} whileHover={reduce ? {} : { y: -8 }}>
-              {plan.featured && <div className="popular"><Sparkles size={14} /> Most sulit</div>}
-              <p>{segment === "business" ? "Business fibre" : "Home fibre"}</p><h3>{plan.name}</h3>
-              <div className="speed">{plan.speed}<small>Mbps</small></div>
-              <p className="plan-note">{plan.note}</p>
-              <div className="price"><sup>$</sup>{plan.price}<span>/mo<br />+ GST</span></div>
-              <ul><li><Check /> Free standard setup</li><li><Check /> Unlimited data</li><li><Check /> 24/7 human support</li></ul>
-              <button className={plan.featured ? "button full" : "button button-outline full"} onClick={() => { setSelected(i); setWizard(true); setStep(2); }}>Choose {plan.name} <ArrowRight size={16} /></button>
-            </motion.article>
-          ))}
-        </div>
-        <label className="router-addon"><div className="router-icon"><Router /></div><div><strong>Add our WiFi 6 router</strong><span>Whole-home coverage, pre-configured for you.</span></div><span className="addon-price">$10/mo</span><input type="checkbox" checked={router} onChange={e => setRouter(e.target.checked)} /></label>
-      </section>
-
-      <section id="network" className="section network-section">
-        <div className="network-copy"><p className="eyebrow">Closer, even from afar</p><h2>A faster line home.</h2><p>Our optimised international routes make calls to Manila, matches with the barkada, and every “kumain ka na?” feel beautifully close.</p>
-          <div className="feature-list"><div><Video /><span><strong>Crystal-clear video calls</strong>Stable 4K streaming across the Pacific.</span></div><div><Gamepad2 /><span><strong>Game without the gigil</strong>Lower latency on the routes that matter.</span></div><div><Headphones /><span><strong>Support that gets you</strong>Real people, English and Filipino friendly.</span></div></div>
-        </div>
-        <div className="ping-panel">
-          <div className="ping-head"><span>LIVE ROUTE SIMULATION</span><span className="live"><i /> Live</span></div>
-          <div className="route-map"><Globe2 /><span className="route route-1" /><span className="route route-2" /><i className="pin pin-nz">NZ</i><i className="pin pin-ph">PH</i></div>
-          <div className="ping-row tara"><span>TARA.NET optimised</span><div><i style={{width:"28%"}} /></div><strong>42 ms</strong></div>
-          <div className="ping-row"><span>Standard NZ broadband</span><div><i style={{width:"70%"}} /></div><strong>118 ms</strong></div>
-          <p>Illustrative performance based on simulated Auckland–Manila routes.</p>
-        </div>
-      </section>
-
-      <section id="rewards" className="section rewards">
-        <div><p className="eyebrow">Bayanihan rewards</p><h2>Bring your barkada.<br />Lower your bill.</h2><p>Earn $7 monthly credit for every active referral. They get brilliant fibre; you both win.</p></div>
-        <div className="reward-card"><Gift /><span>Your monthly credit</span><strong>${savings}<small>/mo</small></strong><input type="range" min="0" max="10" value={referrals} onChange={e => setReferrals(Number(e.target.value))} /><div className="range-label"><span>0 friends</span><b>{referrals} referral{referrals !== 1 ? "s" : ""}</b><span>10 friends</span></div><p>That’s <strong>${savings * 12}</strong> saved every year.</p></div>
-      </section>
-
-      <section className="final-cta"><div className="sun" /><p className="eyebrow">Ready when you are</p><h2>Tara, connect na.</h2><p>Join the KiwiNoys getting more from their fibre.</p><button className="button" onClick={() => setWizard(true)}>Check your address <ArrowRight /></button></section>
-      <footer><Brand /><p>Fibre that feels like home.</p><div><Link href="/login">Customer portal</Link><Link href="/admin">Admin</Link><a href="#plans">Plans</a></div><small>© 2026 TARA.NET Ltd · New Zealand</small></footer>
-
-      <AnimatePresence>{wizard && <motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setWizard(false)}>
-        <motion.div className="wizard" initial={{opacity:0, y:30, scale:.98}} animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:20}} onClick={e => e.stopPropagation()}>
-          <button className="modal-close" onClick={() => setWizard(false)}><X /></button>
-          <Brand compact />
-          <div className="progress"><i style={{width:`${step / 3 * 100}%`}} /></div>
-          {!submitted && <p className="step-label">STEP {step} OF 3</p>}
-          {step === 1 && !submitted && <div className="wizard-body"><div className="success-icon"><Check /></div><h3>Great news—we cover your area.</h3><p>We’ll confirm the exact fibre connection during review.</p><label>Installation address<input value={address} onChange={e=>setAddress(e.target.value)} placeholder="12 Example Street, Auckland" /></label><button className="button full" onClick={() => setStep(2)}>Choose a plan <ChevronRight /></button></div>}
-          {step === 2 && !submitted && <div className="wizard-body"><p className="eyebrow">Pick your bilis</p><h3>Which speed feels right?</h3>{plans[segment].map((p,i)=><button key={p.name} className={`wizard-plan ${selected===i?"selected":""}`} onClick={()=>setSelected(i)}><span><strong>{p.name}</strong><small>{p.speed} Mbps</small></span><b>${p.price}/mo</b></button>)}<label className="mini-check"><input type="checkbox" checked={router} onChange={e=>setRouter(e.target.checked)} /> Add WiFi 6 router (+$10/mo)</label><button className="button full" onClick={() => setStep(3)}>Your details <ChevronRight /></button></div>}
-          {step === 3 && !submitted && <form className="wizard-body" onSubmit={async e=>{e.preventDefault();const form=new FormData(e.currentTarget);const response=await fetch("/api/applications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({address:address||"Address pending manual review",planCode:segment==="business"?(selected?"business-max":"business-500"):(selected?"fibre-max":"fibre-500"),firstName:form.get("firstName"),lastName:form.get("lastName"),email:form.get("email"),mobile:form.get("mobile"),router})});const result=await response.json();if(response.ok){setReference(result.reference);setSubmitted(true)}}}><p className="eyebrow">Almost there</p><h3>Let’s get you connected.</h3><div className="two-fields"><label>First name<input name="firstName" required placeholder="Juan" /></label><label>Last name<input name="lastName" required placeholder="Dela Cruz" /></label></div><label>Email<input name="email" type="email" required placeholder="juan@example.nz" /></label><label>Mobile<input name="mobile" required placeholder="021 555 0123" /></label><label className="mini-check"><input type="checkbox" required /> I agree to the service terms and privacy policy.</label><button className="button full">Submit application <ArrowRight /></button></form>}
-          {submitted && <div className="wizard-body complete"><div className="success-icon"><Check /></div><p className="eyebrow">Application received</p><h3>Salamat! We’ll take it from here.</h3><p>Your reference is <strong>{reference}</strong>. Create an account with the same email to track it.</p><Link className="button full" href="/login?mode=signup">Create customer account <ArrowRight /></Link></div>}
+  return <main className="landing">
+    <LandingHeader/>
+    <section className="landing-hero">
+      <div className="sunburst" aria-hidden="true"/><div className="woven woven-one" aria-hidden="true"/><div className="woven woven-two" aria-hidden="true"/>
+      <div className="landing-hero-inner">
+        <motion.div className="landing-hero-copy" initial={reduce?false:{opacity:0,y:25}} animate={{opacity:1,y:0}} transition={{duration:.65}}>
+          <motion.div className="family-badge" animate={reduce?{}:{y:[0,-4,0]}} transition={{duration:4,repeat:Infinity}}><span>☀</span> Serving Filipino families across NZ <b>🇵🇭 🇳🇿</b></motion.div>
+          <p className="landing-kicker">Fibre for our Kiwi-Filipino whānau</p>
+          <h1>Stay close to home.<br/><em>Grow roots here.</em></h1>
+          <p className="landing-lead">Fast, dependable New Zealand fibre made for Filipino families—to connect with loved ones, chase big dreams, and feel at home in Aotearoa.</p>
+          <div className="hero-actions"><LandingButton onClick={()=>begin()}>Check your address <ArrowRight/></LandingButton><LandingButton href="#plans" tone="light">See family plans</LandingButton></div>
+          <div className="hero-trust"><span><Check/> No fixed term</span><span><Check/> Unlimited data</span><span><Check/> Pamilya-friendly support</span></div>
         </motion.div>
-      </motion.div>}</AnimatePresence>
-    </main>
-  );
+        <motion.div className="family-scene" initial={reduce?false:{opacity:0,scale:.94}} animate={{opacity:1,scale:1}} transition={{duration:.8,delay:.15}}>
+          <div className="scene-sun">☀</div><div className="scene-fern">✦</div>
+          <div className="family-card"><div className="family-portrait"><span>👨‍👩‍👧‍👦</span></div><div><small>CONNECTED FROM AUCKLAND</small><strong>Sunday with Lola</strong><p><i/> Manila · crystal clear</p></div></div>
+          <div className="speed-chip"><Wifi/><span><b>950 Mbps</b>Family-ready fibre</span></div>
+          <div className="hero-note"><Heart/> Built with puso. Backed in NZ.</div>
+        </motion.div>
+      </div>
+      <div className="community-strip"><span>Trusted by growing Filipino communities in</span><b>Auckland</b><i/> <b>Wellington</b><i/> <b>Christchurch</b><i/> <b>Hamilton</b></div>
+    </section>
+
+    <section className="landing-section cultural" id="why">
+      <motion.div className="landing-heading" {...reveal}><p className="landing-kicker">Two homes, one strong connection</p><h2>Bayanihan in Aotearoa.</h2><p>Technology with warmth, service with malasakit, and a network made for the life your family is building.</p></motion.div>
+      <div className="highlight-grid">{highlights.map((item,i)=><motion.div key={item.title} {...reveal} transition={{duration:.5,delay:i*.1}}><LandingCard><div className="feature-icon"><item.icon/></div><span>{item.eyebrow}</span><h3>{item.title}</h3><p>{item.body}</p><a href="#plans">Learn more <ChevronRight/></a></LandingCard></motion.div>)}</div>
+    </section>
+
+    <section className="connection-banner"><motion.div {...reveal}><div className="connection-copy"><p className="landing-kicker">Closer across the Pacific</p><h2>From “kumusta?” to “see you soon.”</h2><p>Optimised routes help your calls, games, and shared moments travel beautifully between New Zealand and the Philippines.</p></div><div className="route-visual"><div className="route-point"><b>NZ</b><span>Aotearoa</span></div><div className="route-line"><i/><strong>42ms</strong></div><div className="route-point gold"><b>PH</b><span>Pilipinas</span></div></div></motion.div></section>
+
+    <section className="landing-section plans-light" id="plans">
+      <motion.div className="landing-heading" {...reveal}><p className="landing-kicker">Simple, honest family plans</p><h2>Choose your bilis.</h2><p>Unlimited data, clear pricing, and room for every screen in the house.</p></motion.div>
+      <div className="landing-plan-grid">{plans.map((plan,i)=><motion.div key={plan.code} {...reveal} transition={{duration:.5,delay:i*.1}} whileHover={reduce?{}:{y:-6}}><LandingCard className={plan.featured?"plan-featured":""}>{plan.featured&&<div className="popular"><Sparkles/> Pamilya favourite</div>}<span>HOME FIBRE</span><h3>{plan.name}</h3><div className="landing-speed">{plan.speed}<small>Mbps</small></div><p>{plan.note}</p><div className="landing-price"><sup>$</sup>{plan.price}<span>/ month<br/>+ GST</span></div><ul><li><Check/>Unlimited data</li><li><Check/>Free standard connection</li><li><Check/>24/7 friendly support</li></ul><LandingButton tone={plan.featured?"primary":"secondary"} onClick={()=>begin(i)}>Choose {plan.name}<ArrowRight/></LandingButton></LandingCard></motion.div>)}</div>
+    </section>
+
+    <section className="landing-section stories" id="stories">
+      <motion.div className="landing-heading" {...reveal}><p className="landing-kicker">Stories from our community</p><h2>Feels like family.</h2><p>Real words from Filipino-Kiwi households finding their rhythm—and their connection—in New Zealand.</p></motion.div>
+      <div className="story-grid">{stories.map((story,i)=><motion.div key={story.name} {...reveal} transition={{duration:.5,delay:i*.1}}><LandingCard><div className="stars" aria-label="5 out of 5 stars">{[1,2,3,4,5].map(x=><Star key={x}/>)}</div><blockquote>“{story.quote}”</blockquote><div className="story-person"><i>{story.initials}</i><span><b>{story.name}</b><small><MapPin/> {story.place}</small></span></div></LandingCard></motion.div>)}</div>
+    </section>
+
+    <section className="landing-cta"><div className="cta-sun">☀</div><motion.div {...reveal}><p className="landing-kicker">Ready when you are</p><h2>Tara, connect na tayo.</h2><p>Bring home a little closer—and make your Kiwi home feel even warmer.</p><LandingButton onClick={()=>begin()}>Check availability <ArrowRight/></LandingButton></motion.div></section>
+    <LandingFooter/>
+
+    <AnimatePresence>{wizard&&<motion.div className="modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setWizard(false)}><motion.div className="wizard landing-wizard" initial={{opacity:0,y:25}} animate={{opacity:1,y:0}} exit={{opacity:0,y:15}} onClick={e=>e.stopPropagation()}><button className="modal-close" aria-label="Close" onClick={()=>setWizard(false)}><X/></button><Brand compact/><div className="progress"><i style={{width:`${step/3*100}%`}}/></div>
+      {!submitted&&<p className="step-label">STEP {step} OF 3</p>}
+      {step===1&&!submitted&&<form className="wizard-body" onSubmit={addressSubmit}><House className="wizard-hero-icon"/><h3>Where should we connect your family?</h3><p>Enter your New Zealand installation address.</p><label>Service address<input value={address} onChange={e=>setAddress(e.target.value)} required placeholder="12 Example Street, Auckland"/></label><LandingButton type="submit">Choose a plan <ArrowRight/></LandingButton></form>}
+      {step===2&&!submitted&&<div className="wizard-body"><p className="landing-kicker">Pick your bilis</p><h3>Choose your family plan.</h3>{plans.map((p,i)=><button key={p.code} className={`wizard-plan ${selected===i?"selected":""}`} onClick={()=>setSelected(i)}><span><strong>{p.name}</strong><small>{p.speed} Mbps</small></span><b>${p.price}/mo</b></button>)}<label className="mini-check"><input type="checkbox" checked={router} onChange={e=>setRouter(e.target.checked)}/><Router/> Add WiFi 6 router (+$10/mo)</label><LandingButton onClick={()=>setStep(3)}>Your details <ArrowRight/></LandingButton></div>}
+      {step===3&&!submitted&&<form className="wizard-body" onSubmit={async e=>{e.preventDefault();setBusy(true);setError("");const form=new FormData(e.currentTarget);const response=await fetch("/api/applications",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({address,planCode:plans[selected].code,firstName:form.get("firstName"),lastName:form.get("lastName"),email:form.get("email"),mobile:form.get("mobile"),router})});const result=await response.json();if(response.ok){setReference(result.reference);setSubmitted(true)}else setError(result.error||"Please try again.");setBusy(false)}}><p className="landing-kicker">Almost there</p><h3>Tell us about your whānau.</h3><div className="two-fields"><label>First name<input name="firstName" required/></label><label>Last name<input name="lastName" required/></label></div><label>Email<input name="email" type="email" required/></label><label>Mobile<input name="mobile" required/></label><label className="mini-check"><input type="checkbox" required/> I agree to the service terms and privacy policy.</label>{error&&<p className="form-error">{error}</p>}<LandingButton type="submit">{busy?"Submitting…":"Submit application"} <ArrowRight/></LandingButton></form>}
+      {submitted&&<div className="wizard-body complete"><div className="success-icon"><Check/></div><p className="landing-kicker">Application received</p><h3>Salamat! We’ll take it from here.</h3><p>Your reference is <strong>{reference}</strong>. Create an account using the same email to track your connection.</p><Link className="landing-button landing-button-primary" href="/login?mode=signup">Create customer account <ArrowRight/></Link></div>}
+    </motion.div></motion.div>}</AnimatePresence>
+  </main>;
 }
