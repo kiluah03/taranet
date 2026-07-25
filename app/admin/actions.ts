@@ -58,3 +58,68 @@ export async function updateTicket(formData: FormData) {
   await supabase.from("audit_events").insert({ actor_id: user.id, action: `ticket.${status}`, entity_type: "ticket", entity_id: id });
   revalidatePath("/admin");
 }
+
+export async function updateCustomerRole(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = String(formData.get("id"));
+  const role = String(formData.get("role"));
+  if (!["customer", "support", "admin"].includes(role)) throw new Error("Invalid role.");
+  if (id === user.id && role !== "admin") throw new Error("You cannot remove your own admin access.");
+  const { error } = await supabase.from("profiles").update({ role, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: `profile.role.${role}`, entity_type: "profile", entity_id: id });
+  revalidatePath("/admin");
+}
+
+export async function updateService(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!["provisioning", "active", "suspended", "cancelled"].includes(status)) throw new Error("Invalid status.");
+  const { error } = await supabase.from("customer_services").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: `service.${status}`, entity_type: "customer_service", entity_id: id });
+  revalidatePath("/admin");
+}
+
+export async function createInvoice(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const userId = String(formData.get("userId"));
+  const subtotal = Number(formData.get("subtotal"));
+  const description = String(formData.get("description"));
+  const dueOn = String(formData.get("dueOn"));
+  if (!userId || !description || !dueOn || !Number.isFinite(subtotal) || subtotal <= 0) throw new Error("Invalid invoice.");
+  const gst = Math.round(subtotal * 0.15 * 100) / 100;
+  const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-7)}`;
+  const { data: invoice, error } = await supabase.from("invoices").insert({
+    user_id: userId, invoice_number: invoiceNumber, status: "unpaid",
+    issued_on: new Date().toISOString().slice(0, 10), due_on: dueOn, subtotal, gst,
+  }).select("id").single();
+  if (error || !invoice) throw new Error(error?.message || "Invoice could not be created.");
+  const { error: itemError } = await supabase.from("invoice_items").insert({ invoice_id: invoice.id, description, quantity: 1, unit_price: subtotal });
+  if (itemError) throw new Error(itemError.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: "invoice.created", entity_type: "invoice", entity_id: invoice.id });
+  revalidatePath("/admin");
+}
+
+export async function createZone(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const name = String(formData.get("name"));
+  const region = String(formData.get("region"));
+  const postcodes = String(formData.get("postcodes")).split(",").map(x => x.trim()).filter(Boolean);
+  if (!name || !region) throw new Error("Name and region are required.");
+  const { data, error } = await supabase.from("service_zones").insert({ name, region, postcodes, active: true }).select("id").single();
+  if (error) throw new Error(error.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: "service_zone.created", entity_type: "service_zone", entity_id: data.id });
+  revalidatePath("/admin");
+}
+
+export async function toggleZone(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = String(formData.get("id"));
+  const active = String(formData.get("active")) === "true";
+  const { error } = await supabase.from("service_zones").update({ active }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: active ? "service_zone.enabled" : "service_zone.disabled", entity_type: "service_zone", entity_id: id });
+  revalidatePath("/admin");
+}
