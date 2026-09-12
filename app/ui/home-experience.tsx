@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight, Check, ChevronRight, Heart, House, MapPin, MessageCircleHeart, Router, ShieldCheck, Sparkles, Star, Users, Wifi, X } from "lucide-react";
+import { ArrowRight, Feather, Check, ChevronRight, Heart, House, MapPin, MessageCircleHeart, Router, ShieldCheck, Sparkles, Star, Users, Wifi, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
@@ -50,12 +50,13 @@ export function HomeExperience() {
           <p className="landing-kicker">Fibre for our Kiwi-Filipino whānau</p>
           <h1>Stay close to home.<br/><em>Grow roots here.</em></h1>
           <p className="landing-lead">Fast, dependable New Zealand fibre made for Filipino families—to connect with loved ones, chase big dreams, and feel at home in Aotearoa.</p>
-          <div className="hero-actions"><LandingButton onClick={()=>begin()}>Check your address <ArrowRight/></LandingButton><LandingButton href="#plans" tone="light">See family plans</LandingButton></div>
+          {/* <div className="hero-actions"><LandingButton onClick={()=>begin()}>Check your address <ArrowRight/></LandingButton><LandingButton href="#plans" tone="light">See family plans</LandingButton></div> */}
+          <div className="hero-actions"><LandingButton href="#plans" tone="light">See family plans</LandingButton></div>
           <div className="hero-trust"><span><Check/> No fixed term</span><span><Check/> Unlimited data</span><span><Check/> Pamilya-friendly support</span></div>
         </motion.div>
         <motion.div className="family-scene" initial={reduce?false:{opacity:0,scale:.94}} animate={{opacity:1,scale:1}} transition={{duration:.8,delay:.15}}>
           <motion.div className="scene-sun" animate={reduce?{}:{rotate:[0,8,0],scale:[1,1.06,1]}} transition={{duration:6,repeat:Infinity,ease:"easeInOut"}}>☀</motion.div>
-          <motion.div className="scene-fern" animate={reduce?{}:{rotate:[-20,-16,-20],y:[0,-8,0]}} transition={{duration:5,repeat:Infinity,ease:"easeInOut"}}>✦</motion.div>
+          <motion.div className="scene-fern" animate={reduce?{}:{rotate:[-20,-16,-20],y:[0,-8,0]}} transition={{duration:5,repeat:Infinity,ease:"easeInOut"}} aria-hidden="true"><Feather/></motion.div>
           <motion.div className="family-card" animate={reduce?{}:{y:[0,-9,0],rotate:[0,-.35,0]}} transition={{duration:6,repeat:Infinity,ease:"easeInOut"}}>
             <div className="family-portrait">
               <motion.div className="family-photo-motion" animate={reduce?{}:{scale:[1,1.045,1],x:[0,-5,0]}} transition={{duration:9,repeat:Infinity,ease:"easeInOut"}}>
@@ -78,7 +79,7 @@ export function HomeExperience() {
       <div className="highlight-grid">{highlights.map((item,i)=><motion.div key={item.title} {...reveal} transition={{duration:.5,delay:i*.1}}><LandingCard><div className="feature-icon"><item.icon/></div><span>{item.eyebrow}</span><h3>{item.title}</h3><p>{item.body}</p><a href="#plans">Learn more <ChevronRight/></a></LandingCard></motion.div>)}</div>
     </section>
 
-    <section className="connection-banner"><motion.div {...reveal}><div className="connection-copy"><p className="landing-kicker">Closer across the Pacific</p><h2>From “kumusta?” to “see you soon.”</h2><p>Optimised routes help your calls, games, and shared moments travel beautifully between New Zealand and the Philippines.</p></div><div className="route-visual"><div className="route-point"><b>NZ</b><span>Aotearoa</span></div><div className="route-line"><i/><strong>42ms</strong></div><div className="route-point gold"><b>PH</b><span>Pilipinas</span></div></div></motion.div></section>
+    <section className="connection-banner"><motion.div {...reveal}><div className="connection-copy"><h2>From “kumusta?” to “see you soon.”</h2><p>Optimised routes help your calls, games, and shared moments travel beautifully between New Zealand and the Philippines.</p></div><div className="route-visual"><div className="route-point"><b>NZ</b><span>Aotearoa</span></div><div className="route-line"><i/><strong>42ms</strong></div><div className="route-point gold"><b>PH</b><span>Pilipinas</span></div></div></motion.div></section>
 
     <section className="landing-section plans-light" id="plans">
       <motion.div className="landing-heading" {...reveal}><p className="landing-kicker">Simple, honest family plans</p><h2>Choose your bilis.</h2><p>Unlimited data, clear pricing, and room for every screen in the house.</p></motion.div>

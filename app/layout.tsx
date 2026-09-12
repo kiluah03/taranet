@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://taranet.nz"),
   title: { default: "TARA.NET — Fibre for Filipino families in New Zealand", template: "%s | TARA.NET" },
   description: "Fast, dependable New Zealand fibre made for Filipino families—to stay close to home and grow roots in Aotearoa.",
+  icons: { icon: "/taranet-logo.jpeg", apple: "/taranet-logo.jpeg" },
   openGraph: {
     title: "Stay close to home. Grow roots here.",
     description: "Family-ready fibre for Filipino whānau across New Zealand.",
