@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Copy, MessageSquarePlus } from "lucide-react";
-import { createAuthBrowserClient } from "../../lib/supabase/auth-client";
+import { createSupportTicket } from "./actions";
 
 export function ReferralButton({ code }: { code: string }) {
   const [copied, setCopied] = useState(false);
@@ -14,8 +14,7 @@ export function ReferralButton({ code }: { code: string }) {
   return <button className="ghost-button" onClick={copy}><Copy size={14}/>{copied ? "Copied!" : "Copy referral link"}</button>;
 }
 
-export function SupportForm({ userId }: { userId: string }) {
-  const supabase = useMemo(() => createAuthBrowserClient(), []);
+export function SupportForm() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,21 +25,17 @@ export function SupportForm({ userId }: { userId: string }) {
     const form = new FormData(event.currentTarget);
     const subject = String(form.get("subject"));
     const body = String(form.get("body"));
-    const reference = `SUP-${Date.now().toString().slice(-7)}`;
-    const { data: ticket, error } = await supabase.from("tickets").insert({
-      reference, user_id: userId, subject, priority: "normal",
-    }).select("id").single();
-    if (!error && ticket) {
-      const { error: messageError } = await supabase.from("ticket_messages").insert({
-        ticket_id: ticket.id, author_id: userId, body,
-      });
-      if (!messageError) {
-        setMessage(`Ticket ${reference} created.`);
+    try {
+      const result = await createSupportTicket({ subject, body });
+      if (result.error) setMessage(result.error);
+      else {
+        setMessage(`Ticket ${result.reference} created.`);
         setOpen(false);
         window.setTimeout(() => window.location.reload(), 900);
-      } else setMessage(messageError.message);
-    } else setMessage(error?.message ?? "Could not create the ticket.");
-    setBusy(false);
+      }
+    } catch { setMessage("Could not send your request. Try again."); }
+    finally { setBusy(false); }
+
   }
 
   return <div>

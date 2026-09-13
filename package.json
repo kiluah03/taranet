@@ -11,7 +11,8 @@
     "start": "next start",
     "test": "npm run build",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "test:auth": "node --test tests/auth.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

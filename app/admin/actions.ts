@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAuthServerClient } from "../../lib/supabase/auth-server";
 
 async function requireAdmin() {
-  const supabase = await createAuthServerClient();
+  const supabase = await createAuthServerClient(true);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in.");
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();

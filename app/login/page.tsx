@@ -1,70 +1,51 @@
 "use client";
 
-import { FormEvent, Suspense, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Brand } from "../ui/brand";
-import { createAuthBrowserClient } from "../../lib/supabase/auth-client";
+import { authPost } from "../../lib/auth/client";
+import { authMessage, safeNext } from "../../lib/auth/security";
 
 function LoginForm() {
   const params = useSearchParams();
-  const router = useRouter();
   const [signup, setSignup] = useState(params.get("mode") === "signup");
   const [busy, setBusy] = useState(false);
-  const [socialBusy, setSocialBusy] = useState<"google" | "facebook" | null>(null);
-  const [message, setMessage] = useState("");
-  const supabase = useMemo(() => createAuthBrowserClient(), []);
-  const nextPath = params.get("next")?.startsWith("/") ? params.get("next")! : "/portal";
+  const [socialBusy, setSocialBusy] = useState<"google" | "github" | "facebook" | null>(null);
+  const [message, setMessage] = useState(params.get("error") ? authMessage(params.get("error")) : "");
+  const nextPath = safeNext(params.get("next"));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy || socialBusy) return;
     setBusy(true);
     setMessage("");
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "");
-    const password = String(form.get("password") ?? "");
-
-    if (signup) {
-      const fullName = String(form.get("fullName") ?? "");
-      const mobile = String(form.get("mobile") ?? "");
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: redirectTo, data: { full_name: fullName, mobile } },
+    try {
+      const result = await authPost("/api/auth/password", {
+        mode: signup ? "signup" : "login", email: String(form.get("email") ?? ""),
+        password: String(form.get("password") ?? ""), fullName: String(form.get("fullName") ?? ""),
+        mobile: String(form.get("mobile") ?? ""), next: nextPath,
       });
-      if (error) setMessage(error.message);
-      else if (data.session) {
-        router.replace(nextPath);
-        router.refresh();
-      } else {
-        setMessage("Check your email and confirm your account, then sign in.");
-      }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) setMessage(error.message);
-      else {
-        router.replace(nextPath);
-        router.refresh();
-      }
-    }
-    setBusy(false);
+      if (result.redirect) window.location.assign(result.redirect);
+      else setMessage(result.message || "Please try again.");
+    } catch (error) {
+      setMessage(error instanceof Error && error.name !== "TimeoutError" ? error.message : "The request timed out. Please try again.");
+    } finally { setBusy(false); }
   }
 
-  async function signInWithSocial(provider: "google" | "facebook") {
+  async function signInWithSocial(provider: "google" | "github" | "facebook") {
+    if (busy || socialBusy) return;
     setSocialBusy(provider);
     setMessage("");
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo },
-    });
-
-    if (error) {
-      setMessage(error.message);
-      setSocialBusy(null);
-    }
+    try {
+      const result = await authPost("/api/auth/oauth", { provider, next: nextPath });
+      if (!result.redirect) throw new Error("Could not connect to the provider. Try again.");
+      window.location.assign(result.redirect);
+    } catch (error) {
+      setMessage(error instanceof Error && error.name !== "TimeoutError" ? error.message : "The request timed out. Please try again.");
+    } finally { setSocialBusy(null); }
   }
 
   return (
@@ -97,6 +78,9 @@ function LoginForm() {
             <span className="social-auth-icon facebook" aria-hidden="true">f</span>
             {socialBusy === "facebook" ? "Connecting…" : "Continue with Facebook"}
           </button>
+          <button type="button" className="social-auth-button" onClick={() => signInWithSocial("github")} disabled={busy || socialBusy !== null}>
+            {socialBusy === "github" ? "Connecting…" : "Continue with GitHub"}
+          </button>
         </div>
         <div className="auth-divider"><span>or continue with email</span></div>
         <form onSubmit={submit}>
@@ -107,13 +91,13 @@ function LoginForm() {
             </>
           )}
           <label>Email<input name="email" type="email" required autoComplete="email" defaultValue={params.get("email") ?? ""} /></label>
-          <label>Password<input name="password" type="password" minLength={8} required autoComplete={signup ? "new-password" : "current-password"} /></label>
-          {message && <div className="auth-message"><CheckCircle2 size={17} />{message}</div>}
+          <label>Password<input name="password" type="password" minLength={signup ? 8 : 1} maxLength={1024} required autoComplete={signup ? "new-password" : "current-password"} /></label>
+          {message && <div className="auth-message" role="alert" aria-live="polite">{message}</div>}
           <button className="button full" disabled={busy || socialBusy !== null}>
             {busy ? "Please wait…" : signup ? "Create account" : "Sign in"} <ArrowRight size={17} />
           </button>
         </form>
-        <button className="auth-switch" onClick={() => { setSignup(!signup); setMessage(""); }}>
+        <button className="auth-switch" disabled={busy || socialBusy !== null} onClick={() => { setSignup(!signup); setMessage(""); }}>
           {signup ? "Already have an account? Sign in" : "New customer? Create an account"}
         </button>
         <Link href="/" className="auth-home">← Back to TARA.NET</Link>
