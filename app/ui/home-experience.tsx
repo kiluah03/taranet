@@ -8,6 +8,12 @@ import { FormEvent, useState } from "react";
 import { Brand } from "./brand";
 import { LandingButton, LandingCard, LandingFooter, LandingHeader } from "./landing-shared";
 
+function SunSilhouette() {
+  return <span className="sun-silhouette" aria-hidden="true">
+    {Array.from({ length: 8 }, (_, ray) => <span className="sun-silhouette-ray" key={ray} style={{ transform: `rotate(${ray * 45}deg)` }} />)}
+  </span>;
+}
+
 const plans = [
   { code: "fibre-500", name: "Fibre 500", speed: "500 / 100", price: 85, note: "Perfect for everyday family life.", featured: false },
   { code: "fibre-max", name: "Fibre Max 1G", speed: "950 / 500", price: 99, note: "For busy homes that do everything.", featured: true },
@@ -43,7 +49,7 @@ export function HomeExperience() {
   return <main className="landing">
     <LandingHeader />
     <section className="landing-hero">
-      <div className="sunburst" aria-hidden="true" /><div className="woven woven-one" aria-hidden="true" /><div className="woven woven-two" aria-hidden="true" />
+      <div className="sunburst" aria-hidden="true"><SunSilhouette /></div><div className="woven woven-one" aria-hidden="true" /><div className="woven woven-two" aria-hidden="true" />
       <div className="landing-hero-inner">
         <motion.div className="landing-hero-copy" initial={reduce ? false : { opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .65 }}>
           <motion.div className="family-badge" animate={reduce ? {} : { y: [0, -4, 0] }} transition={{ duration: 4, repeat: Infinity }}><span>☀</span> Serving Filipino families across NZ <b>🇵🇭 🇳🇿</b></motion.div>
@@ -55,7 +61,7 @@ export function HomeExperience() {
           <div className="hero-trust"><span><Check /> No fixed term</span><span><Check /> Unlimited data</span><span><Check /> Pamilya-friendly support</span></div>
         </motion.div>
         <motion.div className="family-scene" initial={reduce ? false : { opacity: 0, scale: .94 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: .8, delay: .15 }}>
-          <motion.div className="scene-sun" animate={reduce ? {} : { rotate: [0, 8, 0], scale: [1, 1.06, 1] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}>☀</motion.div>
+          <div className="scene-sun" aria-hidden="true"><SunSilhouette /></div>
           <motion.div className="scene-fern" animate={reduce ? {} : { rotate: [-20, -16, -20], y: [0, -8, 0] }} transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }} aria-hidden="true"><Feather /></motion.div>
           <motion.div className="family-card" animate={reduce ? {} : { y: [0, -9, 0], rotate: [0, -.35, 0] }} transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}>
             <div className="family-portrait">
@@ -91,7 +97,7 @@ export function HomeExperience() {
       <div className="story-grid">{stories.map((story, i) => <motion.div key={story.name} {...reveal} transition={{ duration: .5, delay: i * .1 }}><LandingCard><div className="stars" aria-label="5 out of 5 stars">{[1, 2, 3, 4, 5].map(x => <Star key={x} />)}</div><blockquote>“{story.quote}”</blockquote><div className="story-person"><i>{story.initials}</i><span><b>{story.name}</b><small><MapPin /> {story.place}</small></span></div></LandingCard></motion.div>)}</div>
     </section>
 
-    <section className="landing-cta"><div className="cta-sun">☀</div><motion.div {...reveal}><p className="landing-kicker">Ready when you are</p><h2>Tara, connect na tayo.</h2><p>Bring home a little closer—and make your Kiwi home feel even warmer.</p><LandingButton onClick={() => begin()}>Check availability <ArrowRight /></LandingButton></motion.div></section>
+    <section className="landing-cta"><div className="cta-sun" aria-hidden="true"><SunSilhouette /></div><motion.div {...reveal}><p className="landing-kicker">Ready when you are</p><h2>Tara, connect na tayo.</h2><p>Bring home a little closer—and make your Kiwi home feel even warmer.</p><LandingButton onClick={() => begin()}>Check availability <ArrowRight /></LandingButton></motion.div></section>
     <LandingFooter />
 
     <AnimatePresence>{wizard && <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWizard(false)}><motion.div className="wizard landing-wizard" initial={{ opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 15 }} onClick={e => e.stopPropagation()}><button className="modal-close" aria-label="Close" onClick={() => setWizard(false)}><X /></button><Brand compact /><div className="progress"><i style={{ width: `${step / 3 * 100}%` }} /></div>
