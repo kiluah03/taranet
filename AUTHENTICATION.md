@@ -1,5 +1,9 @@
 # Authentication repair and setup
 
+## Current sign-in availability
+
+Social signup and sign-in are intentionally disabled. Login and signup show email/password only, and `/api/auth/oauth` rejects initiation without contacting Supabase. The shared callback remains available for email confirmation. Provider setup below is future reference; re-enable the application UI and OAuth handler only after configuring the desired providers.
+
 ## Stack and findings
 
 This application uses Next.js 16 and Supabase Auth (@supabase/ssr), not NextAuth. Supabase owns password hashing, auth.users, auth.identities, JWT signing, OAuth provider state validation, and verified-email identity linking. The public application profile is public.profiles, keyed by auth.users.id; db/schema.ts is unused for authentication.
@@ -13,6 +17,16 @@ Code defects repaired:
 - Refresh previously ran on every route and could disrupt login/callback requests. Proxy now refreshes only protected pages, verifies users, preserves refreshed cookies on redirects, and prevents caching.
 
 Live check on 2026-09-13: the configured Supabase project reports Google, GitHub, and Facebook DISABLED; email enabled; signup enabled; email confirmation required (mailer_autoconfirm=false). Disabled providers are a confirmed OAuth blocker. The OAuth start route now checks public provider settings and returns feedback without navigating away. Provider secrets, redirect allow lists, and deployed database migration state have not been verified. No credentials were tested against a real user account.
+
+## Configuration verification — 2026-09-18
+
+- Supabase project: `jddqtvzyjhhrupksgkmr`. The supplied publishable and secret keys are configured in Git-ignored `.env.local`, using the environment variable names consumed by the app. Secrets are not stored in this document or `.env.example`.
+- Local `NEXT_PUBLIC_APP_URL` is `http://localhost:3000`. The previous production origin in the local file would reject localhost auth POSTs and send callbacks to production. Keep the production deployment origin configured separately as `https://taranet.vercel.app`.
+- Live read-only checks: Auth settings and the database API returned HTTP 200. Email and signup are enabled; email confirmation is required. Google, GitHub, and Facebook remain disabled.
+- The database API exposes the application tables and reports profile email as optional. This does not prove the profile trigger, RLS policies, or migration history match the repository; those still require SQL/dashboard verification. No migrations were applied during this check.
+- Validation passed: all 12 authentication tests, `npx tsc --noEmit`, and `npm run build`. The development server was restarted. Local HTTP checks confirmed login renders, anonymous dashboard access redirects to login, missing callback codes return to localhost login, CSRF cookies are HttpOnly and SameSite=Lax, cross-origin credential requests return 403, and disabled Google login returns an explanatory error.
+- Remaining hosted setup: verify migrations in filename order, Site URL and callback allow lists, password minimum/rate limits and SMTP; configure and enable the desired social providers with their provider-specific client IDs and secrets. The supplied project API keys cannot change hosted Auth configuration or execute migrations. Browser access failed, so these settings remain unverified.
+- Real-user signup/confirmation, password login, successful OAuth, session refresh, support submission, and signout remain to be tested after hosted setup. No test users were created or confirmation emails sent.
 
 ## Required environment and database setup
 

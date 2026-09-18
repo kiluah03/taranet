@@ -26,12 +26,10 @@ const NextResponse = {
 };
 let client;
 let allowed = true;
-let enabled = true;
 function route(file) {
   return load(file, {
     'next/server': { NextResponse }, zod: { z },
     '../../../../lib/auth/security': security, '../../../lib/auth/security': security,
-    '../../../../lib/auth/providers': { providerEnabled: async () => enabled },
     '../../../../lib/auth/csrf': { checkCsrf: async () => allowed },
     '../../../../lib/supabase/auth-server': { createAuthServerClient: async writable => { assert.equal(writable, true); return client; } },
     '../../../lib/supabase/auth-server': { createAuthServerClient: async writable => { assert.equal(writable, true); return client; } },
@@ -94,16 +92,18 @@ test('auth POST handlers reject CSRF before contacting Supabase', async () => {
     assert.equal((await oauth.POST(post({}))).status, 403);
   } finally { allowed = true; }
 });
-test('OAuth starts server-side PKCE with canonical callback and GitHub email scope', async () => {
-  client = { auth: { signInWithOAuth: async ({ provider, options }) => {
-    assert.equal(provider, 'github'); assert.equal(options.skipBrowserRedirect, true);
-    assert.equal(options.scopes, 'read:user user:email');
-    assert.equal(options.redirectTo, 'https://app.example/auth/callback?next=%2Fdashboard');
-    return { data: { url: 'https://project.supabase.co/auth/v1/authorize' } };
-  } } };
-  assert.match((await (await oauth.POST(post({ provider: 'github' }))).json()).redirect, /supabase/);
-  assert.equal((await oauth.POST(post({ provider: 'unknown' }))).status, 400);
+test('social sign-in stays disabled without contacting Supabase', async () => {
+  client = { auth: { signInWithOAuth: async () => { assert.fail('OAuth must not be initiated'); } } };
+  for (const provider of ['google', 'github', 'facebook']) {
+    const response = await oauth.POST(post({ provider }));
+    assert.equal(response.status, 503);
+    const data = await response.json();
+    assert.match(data.error, /disabled.*email and password/);
+    assert.equal(data.redirect, undefined);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  }
 });
+
 test('callback succeeds only after verified code exchange and returns failures to login', async () => {
   client = { auth: { exchangeCodeForSession: async code => {
     assert.equal(code, 'one-time-code'); return { data: { user: { id: 'user' }, session: { access_token: 'secret' } } };
@@ -161,14 +161,4 @@ test('installed Supabase SDK persists HttpOnly PKCE and session cookies through 
     assert.equal(cookie.options.httpOnly, true); assert.equal(cookie.options.sameSite, 'lax');
     assert.equal(cookie.options.secure, true); assert.equal(cookie.options.path, '/');
   }
-});
-
-
-test('disabled social providers keep the user on login with feedback', async () => {
-  enabled = false; client = null;
-  try {
-    const response = await oauth.POST(post({ provider: 'google' }));
-    assert.equal(response.status, 503);
-    assert.match((await response.json()).error, /provider is unavailable/);
-  } finally { enabled = true; }
 });
