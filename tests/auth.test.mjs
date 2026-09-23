@@ -5,6 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import { z } from 'zod';
 import { createServerClient } from '@supabase/ssr';
+import { NextResponse as FrameworkResponse } from 'next/server.js';
 
 // Execute the actual TypeScript handlers with isolated framework/provider boundaries.
 function load(file, dependencies = {}, globals = {}) {
@@ -160,5 +161,52 @@ test('installed Supabase SDK persists HttpOnly PKCE and session cookies through 
   for (const cookie of writes) {
     assert.equal(cookie.options.httpOnly, true); assert.equal(cookie.options.sameSite, 'lax');
     assert.equal(cookie.options.secure, true); assert.equal(cookie.options.path, '/');
+  }
+});
+
+// Reproduce production without the optional explicit application URL.
+test('Vercel auth bootstrap uses trusted deployment metadata when APP_URL is absent', async () => {
+  const keys = ['APP_URL', 'NEXT_PUBLIC_APP_URL', 'VERCEL_ENV', 'VERCEL_URL', 'VERCEL_PROJECT_PRODUCTION_URL'];
+  const saved = keys.map(key => [key, process.env[key]]);
+  try {
+    for (const key of keys) delete process.env[key];
+    assert.throws(() => security.appOrigin(), /not configured/);
+    process.env.VERCEL_ENV = 'production';
+    process.env.VERCEL_URL = 'deployment-123.vercel.app';
+    process.env.VERCEL_PROJECT_PRODUCTION_URL = 'taranet.vercel.app';
+    assert.equal(security.appOrigin(), 'https://taranet.vercel.app');
+    const csrf = load('app/api/auth/csrf/route.ts', {
+      'next/server': { NextResponse: FrameworkResponse },
+      'next/headers': { cookies: async () => ({ get: () => undefined }) },
+      '../../../../lib/auth/security': security,
+    });
+    const response = await csrf.GET();
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    const { token } = await response.json();
+    assert.match(token, /^[a-f0-9]{64}$/);
+    const cookie = response.headers.get('set-cookie');
+    for (const flag of ['HttpOnly', 'Secure', 'SameSite=lax']) assert.ok(cookie.includes(flag));
+    const request = origin => new Request('https://taranet.vercel.app/api/auth/password', {
+      headers: { origin, 'x-csrf-token': token },
+    });
+    assert.equal(security.validCsrf(request('https://taranet.vercel.app'), token), true);
+    assert.equal(security.validCsrf(request('https://evil.example'), token), false);
+    const redirect = await callback.GET(new Request('https://untrusted.example/auth/callback'));
+    assert.ok(redirect.headers.get('location').startsWith('https://taranet.vercel.app/login?'));
+    process.env.VERCEL_ENV = 'preview';
+    assert.equal(security.appOrigin(), 'https://deployment-123.vercel.app');
+    process.env.NEXT_PUBLIC_APP_URL = 'https://custom.example';
+    assert.equal(security.appOrigin(), 'https://custom.example');
+    process.env.APP_URL = 'https://runtime.example';
+    assert.equal(security.appOrigin(), 'https://runtime.example');
+    for (const invalid of ['https://user:pass@example.com', 'https://example.com/path', 'http://example.com', 'https://example.com?query=1']) {
+      process.env.APP_URL = invalid;
+      assert.throws(() => security.appOrigin(), /must be an HTTPS origin/);
+    }
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
   }
 });

@@ -9,7 +9,13 @@ export function safeNext(value: string | null | undefined) {
 }
 
 export function appOrigin() {
-  const value = process.env.NEXT_PUBLIC_APP_URL;
+  // Vercel supplies trusted deployment metadata even when APP_URL was omitted.
+  // Never derive this security boundary from client-controlled request headers.
+  const deploymentHost = process.env.VERCEL_ENV === "production"
+    ? process.env.VERCEL_PROJECT_PRODUCTION_URL
+    : process.env.VERCEL_URL;
+  const value = process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    (deploymentHost ? "https://" + deploymentHost : undefined);
   if (!value) throw new Error("Authentication URL is not configured.");
   const url = new URL(value);
   if (url.username || url.password || url.pathname !== "/" || url.search || url.hash ||
