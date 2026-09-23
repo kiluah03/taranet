@@ -42,7 +42,9 @@ export function authMessage(code: string | undefined | null): string {
     case "email_not_confirmed": return "Confirm your email before signing in.";
     case "access_denied": return "Social provider access denied. Please try again.";
     case "provider_disabled": case "validation_failed": return "This sign-in provider is unavailable. Try email or another provider.";
-    case "email_not_found": case "email_address_not_authorized": return "The provider did not share an email. Allow email access or sign in with email.";
+    case "email_address_not_authorized": return "Confirmation email could not be sent to this address. Please contact support so we can restore email delivery.";
+    case "email_address_invalid": return "Enter a valid email address that can receive confirmation emails.";
+    case "email_not_found": return "The provider did not share an email. Allow email access or sign in with email.";
     case "identity_already_exists": case "email_exists": case "user_already_exists": return "Sign in to your existing account using its original method. Provider accounts can only be linked after ownership is verified.";
     case "weak_password": return "Choose a stronger password with at least 8 characters.";
     case "over_request_rate_limit": case "over_email_send_rate_limit": return "Too many attempts. Please wait before trying again.";

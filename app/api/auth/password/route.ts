@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       : await supabase.auth.signInWithPassword({ email, password });
     if (result.error) return NextResponse.json({ error: authMessage(result.error.code) }, { status: result.error.status === 429 ? 429 : 400 });
     return NextResponse.json(result.data.session ? { redirect: safeNext(next) } :
-      { message: "Check your email and confirm your account in this browser, then sign in." }, { headers: { "Cache-Control": "no-store" } });
+      { message: "If this address needs confirmation, check your inbox and spam folder to confirm your account in this browser. If you already registered and confirmed it, sign in instead." }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({ error: authMessage(null) }, { status: 503 });
   }

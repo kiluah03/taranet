@@ -38,6 +38,7 @@ function route(file) {
 }
 const password = route('app/api/auth/password/route.ts');
 const oauth = route('app/api/auth/oauth/route.ts');
+const resend = route('app/api/auth/resend/route.ts');
 const callback = route('app/auth/callback/route.ts');
 const signout = route('app/auth/signout/route.ts');
 const post = body => new Request('https://app.example/api/auth/password', { method: 'POST', headers: { origin: 'https://app.example' }, body: JSON.stringify(body) });
@@ -91,6 +92,7 @@ test('auth POST handlers reject CSRF before contacting Supabase', async () => {
   try {
     assert.equal((await password.POST(post({}))).status, 403);
     assert.equal((await oauth.POST(post({}))).status, 403);
+    assert.equal((await resend.POST(post({}))).status, 403);
   } finally { allowed = true; }
 });
 test('social sign-in stays disabled without contacting Supabase', async () => {
@@ -209,4 +211,48 @@ test('Vercel auth bootstrap uses trusted deployment metadata when APP_URL is abs
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
   }
+});
+
+test('confirmation resend validates email, preserves PKCE client writes, and restricts redirects', async () => {
+  let calls = 0;
+  client = { auth: { resend: async input => {
+    calls++;
+    assert.equal(input.type, 'signup');
+    assert.equal(input.email, 'user@example.com');
+    assert.equal(input.options.emailRedirectTo, 'https://app.example/auth/callback?next=%2Fdashboard');
+    return { error: null };
+  } } };
+  assert.equal((await resend.POST(post({ email: 'bad' }))).status, 400);
+  assert.equal(calls, 0);
+  const response = await resend.POST(post({ email: ' user@example.com ', next: '//evil.example' }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.match((await response.json()).message, /If this email has an account awaiting confirmation/);
+  assert.equal(calls, 1);
+});
+
+test('confirmation resend reports email restrictions and rate limits without leaking infrastructure errors', async () => {
+  client = { auth: { resend: async () => ({ error: { code: 'email_address_not_authorized', status: 400 } }) } };
+  let response = await resend.POST(post({ email: 'user@example.com' }));
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /Confirmation email could not be sent/);
+  client.auth.resend = async () => ({ error: { code: 'over_email_send_rate_limit', status: 429 } });
+  assert.equal((await resend.POST(post({ email: 'user@example.com' }))).status, 429);
+  client.auth.resend = async () => { throw new Error('private SMTP credentials'); };
+  response = await resend.POST(post({ email: 'user@example.com' }));
+  assert.equal(response.status, 503);
+  assert.equal((await response.text()).includes('private SMTP'), false);
+});
+
+test('signup does not falsely promise another email for an existing confirmed account', async () => {
+  const input = { mode: 'signup', email: 'user@example.com', password: 'abcdefgh', fullName: 'User', mobile: '123456789' };
+  const messages = [];
+  for (const identities of [[], [{ id: 'new-user' }]]) {
+    client = { auth: { signUp: async () => ({ data: { session: null, user: { identities } } }) } };
+    const response = await password.POST(post(input));
+    assert.equal(response.status, 200);
+    messages.push((await response.json()).message);
+  }
+  assert.equal(messages[0], messages[1]);
+  assert.match(messages[0], /If you already registered and confirmed it, sign in instead/);
 });

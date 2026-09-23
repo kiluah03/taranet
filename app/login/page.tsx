@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, Suspense, useState } from "react";
+import { FormEvent, Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -14,6 +14,28 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(params.get("error") ? authMessage(params.get("error")) : "");
   const nextPath = safeNext(params.get("next"));
+  const formRef = useRef<HTMLFormElement>(null);
+  const [resendWait, setResendWait] = useState(0);
+  useEffect(() => {
+    if (resendWait <= 0) return;
+    const timer = window.setTimeout(() => setResendWait(value => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendWait]);
+
+  async function resendConfirmation() {
+    if (busy || resendWait > 0) return;
+    const emailInput = formRef.current?.elements.namedItem("email") as HTMLInputElement | null;
+    if (!emailInput?.reportValidity()) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await authPost("/api/auth/resend", { email: emailInput.value, next: nextPath });
+      setMessage(result.message || "Please try again.");
+      setResendWait(60);
+    } catch (error) {
+      setMessage(error instanceof Error && error.name !== "TimeoutError" ? error.message : "The request timed out. Please try again.");
+    } finally { setBusy(false); }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,7 +67,7 @@ function LoginForm() {
             ? "Use the same email as your fibre application so we can link it automatically."
             : "Sign in to manage your service, billing, rewards, and support."}
         </p>
-        <form onSubmit={submit}>
+        <form ref={formRef} onSubmit={submit}>
           {signup && (
             <>
               <label>Full name<input name="fullName" required autoComplete="name" /></label>
@@ -61,6 +83,9 @@ function LoginForm() {
         </form>
         <button className="auth-switch" disabled={busy} onClick={() => { setSignup(!signup); setMessage(""); }}>
           {signup ? "Already have an account? Sign in" : "New customer? Create an account"}
+        </button>
+        <button type="button" className="auth-switch" disabled={busy || resendWait > 0} onClick={resendConfirmation}>
+          {resendWait > 0 ? "Resend available in " + resendWait + "s" : "Resend confirmation email"}
         </button>
         <Link href="/" className="auth-home">← Back to TARA.NET</Link>
       </section>
