@@ -17,7 +17,8 @@ export async function GET(request: Request) {
       failure = error?.code || "callback";
     }
   } catch { failure = "callback"; }
-  const target = new URL("/login", appOrigin());
+  const recovery = new URL(next, appOrigin()).pathname === "/reset-password";
+  const target = new URL(recovery ? "/forgot-password" : "/login", appOrigin());
   target.searchParams.set("error", failure);
   target.searchParams.set("next", next);
   return NextResponse.redirect(target, { headers: { "Cache-Control": "no-store" } });

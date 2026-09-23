@@ -81,6 +81,7 @@ function LoginForm() {
             {busy ? "Please wait…" : signup ? "Create account" : "Sign in"} <ArrowRight size={17} />
           </button>
         </form>
+        {!signup && <Link href="/forgot-password" className="auth-switch">Forgot password?</Link>}
         <button className="auth-switch" disabled={busy} onClick={() => { setSignup(!signup); setMessage(""); }}>
           {signup ? "Already have an account? Sign in" : "New customer? Create an account"}
         </button>

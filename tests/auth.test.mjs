@@ -39,6 +39,8 @@ function route(file) {
 const password = route('app/api/auth/password/route.ts');
 const oauth = route('app/api/auth/oauth/route.ts');
 const resend = route('app/api/auth/resend/route.ts');
+const forgotPassword = route('app/api/auth/forgot-password/route.ts');
+const resetPassword = route('app/api/auth/reset-password/route.ts');
 const callback = route('app/auth/callback/route.ts');
 const signout = route('app/auth/signout/route.ts');
 const post = body => new Request('https://app.example/api/auth/password', { method: 'POST', headers: { origin: 'https://app.example' }, body: JSON.stringify(body) });
@@ -93,6 +95,8 @@ test('auth POST handlers reject CSRF before contacting Supabase', async () => {
     assert.equal((await password.POST(post({}))).status, 403);
     assert.equal((await oauth.POST(post({}))).status, 403);
     assert.equal((await resend.POST(post({}))).status, 403);
+    assert.equal((await forgotPassword.POST(post({}))).status, 403);
+    assert.equal((await resetPassword.POST(post({}))).status, 403);
   } finally { allowed = true; }
 });
 test('social sign-in stays disabled without contacting Supabase', async () => {
@@ -255,4 +259,126 @@ test('signup does not falsely promise another email for an existing confirmed ac
   }
   assert.equal(messages[0], messages[1]);
   assert.match(messages[0], /If you already registered and confirmed it, sign in instead/);
+});
+
+test('password recovery uses a trusted callback and does not disclose account existence', async () => {
+  let calls = 0;
+  const messages = [];
+  for (const error of [null, { code: 'user_not_found' }]) {
+    client = { auth: { resetPasswordForEmail: async (email, options) => {
+      calls++;
+      assert.equal(email, 'user@example.com');
+      assert.equal(options.redirectTo, 'https://app.example/auth/callback?next=%2Freset-password');
+      return { error };
+    } } };
+    assert.equal((await forgotPassword.POST(post({ email: 'invalid' }))).status, 400);
+    const response = await forgotPassword.POST(post({ email: ' user@example.com ', next: '//evil.example' }));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
+    messages.push((await response.json()).message);
+  }
+  assert.equal(calls, 2);
+  assert.equal(messages[0], messages[1]);
+  assert.match(messages[0], /If an account exists/);
+});
+
+test('password recovery reports email outages and rate limits', async () => {
+  client = { auth: { resetPasswordForEmail: async () => ({ error: { code: 'email_address_not_authorized', status: 400 } }) } };
+  assert.match((await (await forgotPassword.POST(post({ email: 'user@example.com' }))).json()).error, /password reset email could not be sent/);
+  client.auth.resetPasswordForEmail = async () => ({ error: { code: 'over_email_send_rate_limit', status: 429 } });
+  assert.equal((await forgotPassword.POST(post({ email: 'user@example.com' }))).status, 429);
+  client.auth.resetPasswordForEmail = async () => { throw new Error('private mail credentials'); };
+  const response = await forgotPassword.POST(post({ email: 'user@example.com' }));
+  assert.equal(response.status, 503);
+  assert.equal((await response.text()).includes('private mail'), false);
+});
+
+test('recovery callback exchanges codes and sends expired links back to recovery', async () => {
+  client = { auth: { exchangeCodeForSession: async () => ({ data: { user: { id: 'owner' }, session: {} }, error: null }) } };
+  let response = await callback.GET(new Request('https://app.example/auth/callback?code=valid&next=%2Freset-password'));
+  assert.equal(response.headers.get('location'), 'https://app.example/reset-password');
+  client.auth.exchangeCodeForSession = async () => ({ data: {}, error: { code: 'otp_expired' } });
+  response = await callback.GET(new Request('https://app.example/auth/callback?code=expired&next=%2Freset-password'));
+  assert.ok(response.headers.get('location').startsWith('https://app.example/forgot-password?error='));
+  response = await callback.GET(new Request('https://app.example/auth/callback?next=%2Freset-password'));
+  assert.ok(response.headers.get('location').startsWith('https://app.example/forgot-password?error='));
+});
+
+test('password updates require matching strong passwords and a verified session', async () => {
+  client = null;
+  for (const input of [{ password: 'short', confirmPassword: 'short' }, { password: 'abcdefgh', confirmPassword: 'different' }, {}]) {
+    assert.equal((await resetPassword.POST(post(input))).status, 400);
+  }
+  const input = { password: 'new-password', confirmPassword: 'new-password' };
+  client = { auth: { getUser: async () => ({ data: { user: null }, error: null }), updateUser: () => assert.fail('Unverified user must not update a password') } };
+  assert.equal((await resetPassword.POST(post(input))).status, 401);
+  client.auth.getUser = async () => ({ data: { user: { id: 'untrusted' } }, error: { code: 'bad_jwt' } });
+  assert.equal((await resetPassword.POST(post(input))).status, 401);
+});
+
+test('password reset only updates the session owner and signs out all sessions', async () => {
+  const calls = [];
+  client = { auth: {
+    getUser: async () => ({ data: { user: { id: 'session-owner' } }, error: null }),
+    updateUser: async input => { calls.push('update'); assert.deepEqual(Object.keys(input), ['password']); assert.equal(input.password, 'new-password'); return { error: null }; },
+    signOut: async options => { calls.push('logout'); assert.equal(options.scope, 'global'); return { error: null }; },
+  } };
+  const response = await resetPassword.POST(post({ password: 'new-password', confirmPassword: 'new-password', userId: 'another-user', email: 'victim@example.com' }));
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.deepEqual(calls, ['update', 'logout']);
+  assert.match((await response.json()).message, /password has been updated/);
+});
+
+test('password reset handles rejected passwords and logout failures accurately', async () => {
+  client = { auth: {
+    getUser: async () => ({ data: { user: { id: 'owner' } }, error: null }),
+    updateUser: async () => ({ error: { code: 'same_password' } }),
+    signOut: async () => { assert.fail('Must not log out after rejected update'); },
+  } };
+  const input = { password: 'new-password', confirmPassword: 'new-password' };
+  let response = await resetPassword.POST(post(input));
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /different from your current password/);
+  client.auth.updateUser = async () => ({ error: null });
+  client.auth.signOut = async () => { throw new Error('temporary logout outage'); };
+  response = await resetPassword.POST(post(input));
+  assert.equal(response.status, 200);
+  assert.match((await response.json()).message, /password has been updated/);
+});
+
+test('installed SDK keeps the password recovery verifier in HttpOnly cookies through code exchange', async () => {
+  const jar = new Map();
+  const writes = [];
+  let requestBody;
+  let requestUrl;
+  const server = load('lib/supabase/auth-server.ts', {
+    '@supabase/ssr': { createServerClient },
+    'next/headers': { cookies: async () => ({
+      getAll: () => [...jar].map(([name, value]) => ({ name, value })),
+      set: (name, value, options) => { jar.set(name, value); writes.push({ name, value, options }); },
+    }) },
+    '../auth/security': security,
+  }, { fetch: async (url, init) => {
+    requestUrl = String(url);
+    requestBody = JSON.parse(init.body);
+    if (requestUrl.includes('/recover')) return Response.json({});
+    return Response.json({ access_token: 'test-token', refresh_token: 'test-refresh', token_type: 'bearer', expires_in: 3600,
+      user: { id: '00000000-0000-0000-0000-000000000001', email: 'user@example.com', aud: 'authenticated', role: 'authenticated' } });
+  } });
+  let supabase = await server.createAuthServerClient(true);
+  assert.equal((await supabase.auth.resetPasswordForEmail('user@example.com', { redirectTo: 'https://app.example/auth/callback?next=%2Freset-password' })).error, null);
+  assert.equal(new URL(requestUrl).searchParams.get('redirect_to'), 'https://app.example/auth/callback?next=%2Freset-password');
+  assert.equal(requestBody.code_challenge_method, 's256');
+  assert.ok(requestBody.code_challenge);
+  assert.ok(writes.some(cookie => cookie.name.includes('code-verifier') && cookie.value));
+  supabase = await server.createAuthServerClient(true);
+  assert.equal((await supabase.auth.exchangeCodeForSession('recovery-code')).error, null);
+  assert.equal(requestBody.auth_code, 'recovery-code');
+  assert.ok(requestBody.code_verifier.length > 32);
+  for (const cookie of writes) {
+    assert.equal(cookie.options.httpOnly, true);
+    assert.equal(cookie.options.secure, true);
+    assert.equal(cookie.options.sameSite, 'lax');
+  }
 });
