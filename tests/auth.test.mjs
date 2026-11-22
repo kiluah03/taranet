@@ -29,7 +29,11 @@ let client;
 let allowed = true;
 function route(file) {
   return load(file, {
-    'next/server': { NextResponse }, zod: { z },
+    'next/server': { NextResponse },
+    'next/headers': { cookies: async () => ({ get: () => undefined }) },
+    zod: { z },
+    '../../../../lib/affiliates/code': { AFFILIATE_COOKIE: 'taranet_ref' },
+    '../../../../lib/affiliates/server': { recordAffiliateReferral: async () => ({ recorded: false }) },
     '../../../../lib/auth/security': security, '../../../lib/auth/security': security,
     '../../../../lib/auth/csrf': { checkCsrf: async () => allowed },
     '../../../../lib/supabase/auth-server': { createAuthServerClient: async writable => { assert.equal(writable, true); return client; } },

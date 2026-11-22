@@ -8,7 +8,7 @@ import { Brand } from "./brand";
 export function DashboardShell({ admin = false, children, userName, customerReference }: { admin?: boolean; children: React.ReactNode; userName?: string; customerReference?: string }) {
   const [open, setOpen] = useState(false);
   const links = admin
-    ? [[LayoutDashboard,"Overview","#overview"],[Users,"Customers","#customers"],[TicketCheck,"Applications","#applications"],[FileText,"Billing","#billing"],[CircleHelp,"Support","#support"],[Network,"Service zones","#zones"],[Settings,"Audit log","#audit"]]
+    ? [[LayoutDashboard,"Overview","#overview"],[Users,"Customers","#customers"],[TicketCheck,"Applications","#applications"],[Gift,"Affiliates","#affiliates"],[FileText,"Billing","#billing"],[CircleHelp,"Support","#support"],[Network,"Service zones","#zones"],[Settings,"Audit log","#audit"]]
     : [[LayoutDashboard,"Overview","#overview"],[Wifi,"My service","#service"],[CreditCard,"Billing","#billing"],[Gift,"Bayanihan rewards","#rewards"],[CircleHelp,"Support","#support"],[Settings,"Profile","#profile"]];
   const displayName = userName || (admin ? "Ana Dela Cruz" : "Customer");
   const initials = displayName.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();

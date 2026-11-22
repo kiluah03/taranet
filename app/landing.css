@@ -80,4 +80,13 @@
 .legal-card li{margin:6px 0}
 .legal-card a{color:var(--ph-blue);font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .legal-back{display:inline-flex;align-items:center;gap:6px;margin-top:28px;color:var(--ph-blue);font-size:13px;font-weight:800}
+.partner-form{margin-top:16px;display:grid;gap:14px;max-width:520px}
+.partner-form label{display:block;font-size:12px;font-weight:700;color:var(--charcoal)}
+.partner-optional{font-weight:500;color:var(--muted)}
+.partner-form input{display:block;width:100%;margin-top:6px;padding:12px 14px;border-radius:10px;border:1px solid #cbd5e1;background:#f8fafc;color:var(--charcoal);font-size:14px;outline:0}
+.partner-form input:focus{border-color:var(--ph-blue);background:#fff}
+.partner-form .landing-button{justify-self:start;margin-top:4px}
+.partner-success{display:flex;align-items:flex-start;gap:10px;padding:16px 18px;border-radius:12px;background:#ecfdf5;border:1px solid #86efac;color:#14532d;margin-top:14px}
+.partner-success svg{flex-shrink:0;margin-top:2px;color:#16a34a}
+.partner-success p{margin:0;color:#14532d;font-weight:600}
 @media(max-width:620px){.legal-hero{padding:52px 18px 44px}.legal-section{padding:36px 18px 68px}.legal-card{padding:26px 20px}}

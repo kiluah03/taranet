@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { normalizeAffiliateCode } from "../../lib/affiliates/code";
 import { createAuthServerClient } from "../../lib/supabase/auth-server";
 
 async function requireAdmin() {
@@ -44,6 +46,12 @@ export async function activateApplication(formData: FormData) {
     if (error) throw new Error(error.message);
   }
   await supabase.from("applications").update({ status: "activated", reviewed_by: user.id, reviewed_at: new Date().toISOString() }).eq("id", id);
+  // Promote any pending affiliate referral linked to this application or customer to qualified.
+  const qualifiedAt = new Date().toISOString();
+  await supabase.from("affiliate_referrals").update({ status: "qualified", updated_at: qualifiedAt }).eq("status", "pending").eq("application_id", id);
+  if (application.user_id) {
+    await supabase.from("affiliate_referrals").update({ status: "qualified", updated_at: qualifiedAt }).eq("status", "pending").eq("referred_user_id", application.user_id);
+  }
   await supabase.from("audit_events").insert({ actor_id: user.id, action: "application.activated", entity_type: "application", entity_id: id });
   revalidatePath("/admin");
 }
@@ -121,5 +129,62 @@ export async function toggleZone(formData: FormData) {
   const { error } = await supabase.from("service_zones").update({ active }).eq("id", id);
   if (error) throw new Error(error.message);
   await supabase.from("audit_events").insert({ actor_id: user.id, action: active ? "service_zone.enabled" : "service_zone.disabled", entity_type: "service_zone", entity_id: id });
+  revalidatePath("/admin");
+}
+
+const createAffiliateSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(254),
+  code: z.string().trim().min(2).max(32),
+  commissionType: z.enum(["fixed", "percentage"]),
+  commissionValue: z.coerce.number().min(0).max(10000),
+  status: z.enum(["pending", "active", "suspended"]),
+});
+
+export async function createAffiliate(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const parsed = createAffiliateSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    code: formData.get("code"),
+    commissionType: formData.get("commissionType"),
+    commissionValue: formData.get("commissionValue"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) throw new Error("Invalid affiliate details.");
+  const code = normalizeAffiliateCode(parsed.data.code);
+  if (!code) throw new Error("Code must be 2–32 alphanumeric characters (hyphens/underscores allowed).");
+  const { data, error } = await supabase.from("affiliates").insert({
+    name: parsed.data.name,
+    email: parsed.data.email.toLowerCase(),
+    code,
+    commission_type: parsed.data.commissionType,
+    commission_value: parsed.data.commissionValue,
+    status: parsed.data.status,
+  }).select("id").single();
+  if (error || !data) throw new Error(error?.message || "Could not create affiliate.");
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: "affiliate.created", entity_type: "affiliate", entity_id: data.id, detail: { code, status: parsed.data.status } });
+  revalidatePath("/admin");
+}
+
+export async function updateAffiliateStatus(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!["pending", "active", "suspended"].includes(status)) throw new Error("Invalid affiliate status.");
+  const { error } = await supabase.from("affiliates").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: `affiliate.${status}`, entity_type: "affiliate", entity_id: id });
+  revalidatePath("/admin");
+}
+
+export async function updateAffiliateReferralStatus(formData: FormData) {
+  const { supabase, user } = await requireAdmin();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (!["pending", "qualified", "paid", "voided"].includes(status)) throw new Error("Invalid referral status.");
+  const { error } = await supabase.from("affiliate_referrals").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) throw new Error(error.message);
+  await supabase.from("audit_events").insert({ actor_id: user.id, action: `affiliate_referral.${status}`, entity_type: "affiliate_referral", entity_id: id });
   revalidatePath("/admin");
 }

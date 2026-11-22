@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Check, Clock3, LifeBuoy, Users } from "lucide-react";
+import { Check, Gift, LifeBuoy, Users } from "lucide-react";
 import { DashboardShell, Metric } from "../ui/dashboard-shell";
 import { createAuthServerClient } from "../../lib/supabase/auth-server";
-import { activateApplication, createInvoice, createZone, reviewApplication, toggleZone, updateCustomerRole, updateService, updateTicket } from "./actions";
+import { activateApplication, createAffiliate, createInvoice, createZone, reviewApplication, toggleZone, updateAffiliateReferralStatus, updateAffiliateStatus, updateCustomerRole, updateService, updateTicket } from "./actions";
 
 export const metadata: Metadata = { title: "Admin console" };
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function AdminPage() {
   const { data: admin } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   if (admin?.role !== "admin") redirect("/portal");
 
-  const [profilesResult, applicationsResult, servicesResult, invoicesResult, ticketsResult, auditResult, zonesResult] = await Promise.all([
+  const [profilesResult, applicationsResult, servicesResult, invoicesResult, ticketsResult, auditResult, zonesResult, affiliatesResult, referralsResult] = await Promise.all([
     supabase.from("profiles").select("id,full_name,email,role").order("created_at", { ascending: false }),
     supabase.from("applications").select("*").order("created_at", { ascending: false }).limit(25),
     supabase.from("customer_services").select("*, profiles!customer_services_user_id_fkey(full_name,email), plans(name,code)").order("created_at", { ascending: false }),
@@ -30,6 +30,8 @@ export default async function AdminPage() {
     supabase.from("tickets").select("*, profiles!tickets_user_id_fkey(full_name,email)").order("created_at", { ascending: false }).limit(15),
     supabase.from("audit_events").select("*").order("created_at", { ascending: false }).limit(8),
     supabase.from("service_zones").select("*").order("region").order("name"),
+    supabase.from("affiliates").select("*").order("created_at", { ascending: false }).limit(25),
+    supabase.from("affiliate_referrals").select("*, affiliates(name,code)").order("created_at", { ascending: false }).limit(25),
   ]);
 
   const profiles = profilesResult.data ?? [];
@@ -38,6 +40,8 @@ export default async function AdminPage() {
   const audits = auditResult.data ?? [];
   const services = servicesResult.data ?? [];
   const zones = zonesResult.data ?? [];
+  const affiliates = affiliatesResult.data ?? [];
+  const affiliateReferrals = referralsResult.data ?? [];
   const revenue = (invoicesResult.data ?? []).filter(x => x.status === "paid").reduce((sum, x) => sum + Number(x.total), 0);
   const pending = applications.filter(x => x.status === "pending_review");
   const openTickets = tickets.filter(x => !["resolved", "closed"].includes(x.status));
@@ -94,6 +98,37 @@ export default async function AdminPage() {
           <form action={createInvoice} className="admin-form"><label>Customer<select name="userId" required defaultValue=""><option value="" disabled>Select customer</option>{profiles.filter(x=>x.role==="customer").map(p=><option value={p.id} key={p.id}>{p.full_name} · {p.email}</option>)}</select></label><label>Description<input name="description" required placeholder="Monthly fibre service"/></label><label>Subtotal (NZD)<input name="subtotal" type="number" min="0.01" step="0.01" required/></label><label>Due date<input name="dueOn" type="date" required/></label><button className="button full">Create invoice</button></form>
         </article>
       </div>
+
+      <div className="admin-grid" id="affiliates">
+        <article className="dash-card"><div className="card-head"><span><Gift/> AFFILIATE PARTNERS</span></div>
+          <div className="admin-list">{affiliates.length ? affiliates.map(aff =>
+            <div className="admin-record" key={aff.id}>
+              <div><strong>{aff.name} · {aff.code}</strong><small>{aff.email} · {aff.commission_type === "fixed" ? `$${Number(aff.commission_value).toFixed(2)}` : `${aff.commission_value}%`}</small></div>
+              <em className={aff.status === "active" ? "ready" : "review"}>{aff.status}</em>
+              <form action={updateAffiliateStatus} className="admin-actions"><input type="hidden" name="id" value={aff.id}/><select name="status" defaultValue={aff.status}><option value="pending">Pending</option><option value="active">Active</option><option value="suspended">Suspended</option></select><button>Save</button></form>
+            </div>) : <p className="muted">No affiliate partners yet.</p>}</div>
+        </article>
+        <article className="dash-card"><div className="card-head"><span>CREATE AFFILIATE</span></div>
+          <form action={createAffiliate} className="admin-form">
+            <label>Partner name<input name="name" required placeholder="Barkada Community NZ"/></label>
+            <label>Email<input name="email" type="email" required placeholder="partner@example.co.nz"/></label>
+            <label>Code<input name="code" required placeholder="TESTCODE"/></label>
+            <label>Commission type<select name="commissionType" defaultValue="fixed"><option value="fixed">Fixed ($ NZD)</option><option value="percentage">Percentage (%)</option></select></label>
+            <label>Commission value<input name="commissionValue" type="number" min="0" step="0.01" defaultValue="5" required/></label>
+            <label>Status<select name="status" defaultValue="active"><option value="active">Active</option><option value="pending">Pending</option><option value="suspended">Suspended</option></select></label>
+            <button className="button full">Create affiliate</button>
+          </form>
+        </article>
+      </div>
+
+      <article className="dash-card" style={{ marginBottom: 20 }}><div className="card-head"><span>AFFILIATE REFERRALS</span></div>
+        <div className="admin-list">{affiliateReferrals.length ? affiliateReferrals.map(ref =>
+          <div className="admin-record" key={ref.id}>
+            <div><strong>{ref.referred_email}</strong><small>{ref.code_used} ({(ref.affiliates as {name?:string}|null)?.name || "Partner"}) · {ref.attribution_source} · ${Number(ref.commission_amount).toFixed(2)} NZD</small></div>
+            <em className={ref.status === "qualified" || ref.status === "paid" ? "ready" : "review"}>{ref.status}</em>
+            <form action={updateAffiliateReferralStatus} className="admin-actions"><input type="hidden" name="id" value={ref.id}/><select name="status" defaultValue={ref.status}><option value="pending">Pending</option><option value="qualified">Qualified</option><option value="paid">Paid</option><option value="voided">Voided</option></select><button>Update</button></form>
+          </div>) : <p className="muted">No affiliate referrals recorded yet.</p>}</div>
+      </article>
 
       <div className="admin-grid lower" id="zones">
         <article className="dash-card"><div className="card-head"><span>SERVICE ZONES</span></div>

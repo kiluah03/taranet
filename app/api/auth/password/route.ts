@@ -1,19 +1,28 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { AFFILIATE_COOKIE } from "../../../../lib/affiliates/code";
+import { recordAffiliateReferral } from "../../../../lib/affiliates/server";
 import { createAuthServerClient } from "../../../../lib/supabase/auth-server";
 import { checkCsrf } from "../../../../lib/auth/csrf";
 import { appOrigin, authMessage, safeNext } from "../../../../lib/auth/security";
+
 const schema = z.object({
-  mode: z.enum(["login", "signup"]), email: z.string().trim().email().max(254),
-  password: z.string().min(1).max(1024), fullName: z.string().trim().max(160).optional(),
-  mobile: z.string().trim().max(30).optional(), next: z.string().optional(),
+  mode: z.enum(["login", "signup"]),
+  email: z.string().trim().email().max(254),
+  password: z.string().min(1).max(1024),
+  fullName: z.string().trim().max(160).optional(),
+  mobile: z.string().trim().max(30).optional(),
+  next: z.string().optional(),
+  referralCode: z.string().trim().max(64).optional(),
 });
+
 export async function POST(request: Request) {
   try {
     if (!await checkCsrf(request)) return NextResponse.json({ error: "Refresh the page and try again." }, { status: 403 });
     const parsed = schema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: "Enter a valid email and password." }, { status: 400 });
-    const { mode, email, password, fullName, mobile, next } = parsed.data;
+    const { mode, email, password, fullName, mobile, next, referralCode } = parsed.data;
     if (mode === "signup" && (password.length < 8 || !fullName || !mobile))
       return NextResponse.json({ error: "Enter your name, mobile, and a password of at least 8 characters." }, { status: 400 });
     const supabase = await createAuthServerClient(true);
@@ -24,6 +33,21 @@ export async function POST(request: Request) {
         } })
       : await supabase.auth.signInWithPassword({ email, password });
     if (result.error) return NextResponse.json({ error: authMessage(result.error.code) }, { status: result.error.status === 429 ? 429 : 400 });
+
+    if (mode === "signup") {
+      try {
+        const cookieCode = (await cookies()).get(AFFILIATE_COOKIE)?.value;
+        await recordAffiliateReferral({
+          code: referralCode,
+          cookieCode,
+          referredEmail: email,
+          referredUserId: result.data.user?.id ?? null,
+        });
+      } catch {
+        // Invalid, expired, or unrecordable referral codes must never block customer signup.
+      }
+    }
+
     return NextResponse.json(result.data.session ? { redirect: safeNext(next) } :
       { message: "If this address needs confirmation, check your inbox and spam folder to confirm your account in this browser. If you already registered and confirmed it, sign in instead." }, { headers: { "Cache-Control": "no-store" } });
   } catch {

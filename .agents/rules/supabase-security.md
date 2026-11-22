@@ -12,7 +12,7 @@ Reference `AUTHENTICATION.md` for full auth design rationale. Never weaken any c
 - **`createAuthServerClient(writable = false)` (`lib/supabase/auth-server.ts`)**: Use for all authenticated user and staff operations under RLS.
   - Pass `writable = false` in Server Components (read-only; `proxy.ts` handles refresh).
   - Pass `writable = true` in Route Handlers and Server Actions that sign in, sign out, exchange PKCE codes, or update passwords.
-- **`getServiceClient()` (`lib/supabase/server.ts`)**: Uses `SUPABASE_SERVICE_ROLE_KEY` with `persistSession: false`. Restricted **exclusively** to unauthenticated public application inserts in `app/api/applications/route.ts`. Never use it for authentication, identity linking, customer portal reads/writes, or admin actions.
+- **`getServiceClient()` (`lib/supabase/server.ts`)**: Uses `SUPABASE_SERVICE_ROLE_KEY` with `persistSession: false`. Restricted strictly to unauthenticated public server endpoints (`app/api/applications/route.ts`, `app/api/affiliates/validate/route.ts`, `app/api/affiliates/apply/route.ts`, and non-blocking affiliate referral attribution in `app/api/auth/password/route.ts`). Never use it for authentication, identity linking, customer portal reads/writes, or admin actions.
 - **Secret Hygiene**: Never expose `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, or OAuth provider secrets in client code, API JSON, logs, or `NEXT_PUBLIC_*` variables.
 
 ## 2. Session, CSRF & Redirect Invariants
