@@ -39,7 +39,7 @@
 /* Official TARA NET identity: Philippine colours, alpine light, silver fern. */
 .landing-header{border-top:4px solid transparent;border-image:linear-gradient(90deg,var(--ph-blue) 0 44%,var(--sun-gold) 44% 56%,var(--ph-red) 56%) 1}
 .landing-nav{height:88px}.landing-hero{background:linear-gradient(124deg,#111b60,#202b96 65%,#303eac)}
-.landing-hero:after{content:"";position:absolute;inset:auto 0 70px;height:170px;background:rgba(255,255,255,.06);clip-path:polygon(0 100%,0 82%,13% 35%,21% 67%,34% 5%,48% 75%,61% 32%,74% 69%,85% 14%,100% 80%,100% 100%);pointer-events:none}
+.landing-hero:after{content:"";position:absolute;inset:auto 0 0;height:170px;background:rgba(255,255,255,.06);clip-path:polygon(0 100%,0 82%,13% 35%,21% 67%,34% 5%,48% 75%,61% 32%,74% 69%,85% 14%,100% 80%,100% 100%);pointer-events:none}
 .landing-hero .hero-actions .landing-button-primary{background:var(--ph-red);color:white;box-shadow:0 12px 28px rgba(10,13,61,.25)}
 .landing-hero .hero-actions .landing-button-primary:hover{background:#cf1027}
 .scene-fern{color:#d5e2d8;opacity:.7}.scene-fern svg{width:100px;height:130px;stroke-width:1}.connection-banner{background:linear-gradient(120deg,#111b60 20%,#202b96 70%,#244c45)}
@@ -54,3 +54,30 @@
 .sun-silhouette-ray{position:absolute;inset:0}
 .sun-silhouette-ray::before{content:"";position:absolute;left:44%;top:2%;width:12%;height:24%;background:currentColor;clip-path:polygon(50% 0,100% 70%,80% 100%,20% 100%,0 70%)}
 @media(max-width:620px){.sunburst{width:520px;right:-270px;top:-180px;opacity:.07}.scene-sun{width:70px;height:70px}.cta-sun{width:360px}}
+
+/* GST-inclusive plan pricing, terms note, footer links, and legal pages */
+.landing-price-block{margin:22px 0 20px}
+.landing-price-block .landing-price{margin:0;align-items:baseline;font-size:clamp(36px,4vw,46px);line-height:1.05}
+.landing-price-block .landing-price sup{font-size:18px;margin-top:0;align-self:flex-start;padding-top:6px}
+.landing-price-block .landing-price span{font-size:12px;font-weight:700;color:#64748b;margin:0 0 0 8px}
+.landing-price-gst{margin:6px 0 0;font-size:13px;font-weight:700;color:var(--muted)}
+.landing-plan-term{margin:0 0 18px;font-size:12px;font-weight:700;color:var(--ph-blue-dark)}
+.landing-footer-base a{color:#cbd5e1;transition:.2s ease}
+.landing-footer-base a:hover{color:var(--sun-gold)}
+
+.legal-hero{background:linear-gradient(124deg,#111b60,#202b96 65%,#303eac);color:white;padding:72px 24px 60px;position:relative;overflow:hidden}
+.legal-hero-inner{max-width:860px;margin:auto;position:relative;z-index:2}
+.legal-hero .landing-kicker{color:var(--sun-gold)}
+.legal-hero h1{font-size:clamp(36px,5vw,56px);line-height:1.04;letter-spacing:-.045em;margin:12px 0 16px}
+.legal-hero p{color:#dbe7ff;font-size:16px;line-height:1.7;max-width:680px;margin:0}
+.legal-meta{margin-top:18px!important;font-size:12px!important;color:#bbcdf4!important;letter-spacing:.03em}
+.legal-section{max-width:860px;margin:auto;padding:56px 24px 92px}
+.legal-card{background:#fff;border:1px solid var(--landing-line);border-radius:18px;padding:40px;box-shadow:0 8px 35px rgba(25,45,75,.06)}
+.legal-card h2{font-size:21px;color:var(--ph-blue-dark);margin:28px 0 10px;letter-spacing:-.02em}
+.legal-card h2:first-child{margin-top:0}
+.legal-card p,.legal-card li{color:var(--muted);font-size:14px;line-height:1.75}
+.legal-card ul{margin:10px 0 16px;padding-left:20px}
+.legal-card li{margin:6px 0}
+.legal-card a{color:var(--ph-blue);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.legal-back{display:inline-flex;align-items:center;gap:6px;margin-top:28px;color:var(--ph-blue);font-size:13px;font-weight:800}
+@media(max-width:620px){.legal-hero{padding:52px 18px 44px}.legal-section{padding:36px 18px 68px}.legal-card{padding:26px 20px}}
