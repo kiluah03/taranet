@@ -10,7 +10,7 @@ const mono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://taranet.nz"),
-  title: { default: "TARA.NET — Fibre for Filipino families in New Zealand", template: "%s | TARA.NET" },
+  title: { default: "TARANET NZ — Fibre for Filipino families in New Zealand", template: "%s | TARANET NZ" },
   description: "Fast, dependable New Zealand fibre made for Filipino families—to stay close to home and grow roots in Aotearoa.",
   icons: { icon: "/taranet-logo.jpeg", apple: "/taranet-logo.jpeg" },
   openGraph: {

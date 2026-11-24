@@ -185,7 +185,7 @@ export function LoginForm({ initialRefCode = "" }: { initialRefCode?: string }) 
         <button type="button" className="auth-switch" disabled={busy || resendWait > 0} onClick={resendConfirmation}>
           {resendWait > 0 ? "Resend available in " + resendWait + "s" : "Resend confirmation email"}
         </button>
-        <Link href="/" className="auth-home">← Back to TARA.NET</Link>
+        <Link href="/" className="auth-home">← Back to TARANET NZ</Link>
       </section>
     </main>
   );
