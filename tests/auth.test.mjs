@@ -386,3 +386,21 @@ test('installed SDK keeps the password recovery verifier in HttpOnly cookies thr
     assert.equal(cookie.options.sameSite, 'lax');
   }
 });
+
+const confirm = route('app/auth/confirm/route.ts');
+test('token-hash confirmation verifies OTP in any browser and restricts redirects', async () => {
+  let seen;
+  client = { auth: { verifyOtp: async input => { seen = input; return { error: null }; } } };
+  let response = await confirm.GET(new Request('https://app.example/auth/confirm?token_hash=abc&type=signup&next=//evil.example'));
+  assert.deepEqual({ ...seen }, { type: 'signup', token_hash: 'abc' });
+  assert.equal(response.headers.get('location'), 'https://app.example/dashboard');
+  response = await confirm.GET(new Request('https://app.example/auth/confirm?token_hash=abc&type=recovery'));
+  assert.equal(response.headers.get('location'), 'https://app.example/reset-password');
+  client = { auth: { verifyOtp: async () => ({ error: { code: 'otp_expired' } }) } };
+  response = await confirm.GET(new Request('https://app.example/auth/confirm?token_hash=bad&type=recovery'));
+  assert.match(response.headers.get('location'), /\/forgot-password\?error=otp_expired/);
+  response = await confirm.GET(new Request('https://app.example/auth/confirm?token_hash=bad&type=signup'));
+  assert.match(response.headers.get('location'), /\/login\?error=otp_expired/);
+  response = await confirm.GET(new Request('https://app.example/auth/confirm?type=magiclink'));
+  assert.match(response.headers.get('location'), /\/login\?error=confirmation/);
+});

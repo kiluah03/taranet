@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { normalizeAffiliateCode } from "../../lib/affiliates/code";
+import { notifyPartnerApproved, notifyReferralStatus } from "../../lib/email/affiliate";
 import { createAuthServerClient } from "../../lib/supabase/auth-server";
 
 async function requireAdmin() {
@@ -175,6 +176,10 @@ export async function updateAffiliateStatus(formData: FormData) {
   const { error } = await supabase.from("affiliates").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(error.message);
   await supabase.from("audit_events").insert({ actor_id: user.id, action: `affiliate.${status}`, entity_type: "affiliate", entity_id: id });
+  if (status === "active") {
+    const { data: affiliate } = await supabase.from("affiliates").select("name,email,code").eq("id", id).maybeSingle();
+    if (affiliate) await notifyPartnerApproved(affiliate).catch(() => undefined);
+  }
   revalidatePath("/admin");
 }
 
@@ -186,5 +191,12 @@ export async function updateAffiliateReferralStatus(formData: FormData) {
   const { error } = await supabase.from("affiliate_referrals").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) throw new Error(error.message);
   await supabase.from("audit_events").insert({ actor_id: user.id, action: `affiliate_referral.${status}`, entity_type: "affiliate_referral", entity_id: id });
+  if (status === "qualified" || status === "paid") {
+    const { data: referral } = await supabase.from("affiliate_referrals").select("referred_email,code_used,affiliates(name,email)").eq("id", id).maybeSingle();
+    const partner = referral?.affiliates as { name: string; email: string } | null | undefined;
+    if (referral && partner) {
+      await notifyReferralStatus({ partnerName: partner.name, partnerEmail: partner.email, code: referral.code_used, referredEmail: referral.referred_email, status }).catch(() => undefined);
+    }
+  }
   revalidatePath("/admin");
 }

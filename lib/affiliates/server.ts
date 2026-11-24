@@ -1,4 +1,5 @@
 import { getServiceClient } from "../supabase/server";
+import { notifyReferralRecorded } from "../email/affiliate";
 import { normalizeAffiliateCode } from "./code";
 
 export type AffiliateValidationResult =
@@ -106,6 +107,14 @@ export async function recordAffiliateReferral(input: {
     });
 
     if (insertError) return { recorded: false, reason: "insert_failed" };
+    try {
+      await notifyReferralRecorded({
+        partnerName: affiliate.name,
+        partnerEmail: affiliate.email,
+        code: affiliate.code,
+        referredEmail: input.referredEmail,
+      });
+    } catch { /* Notification failures never affect signup. */ }
     return { recorded: true };
   } catch {
     return { recorded: false, reason: "unexpected_error" };

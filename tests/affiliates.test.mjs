@@ -114,6 +114,7 @@ test('validateAffiliateCode returns only displayName for active affiliates and n
   const serverLib = load('lib/affiliates/server.ts', {
     '../supabase/server': { getServiceClient: () => fakeServiceClient },
     './code': codeLib,
+    '../email/affiliate': { notifyReferralRecorded: async () => undefined },
   });
 
   const validateRoute = load('app/api/affiliates/validate/route.ts', {
@@ -170,6 +171,7 @@ test('recordAffiliateReferral blocks self-referrals, computes commission server-
   const serverLib = load('lib/affiliates/server.ts', {
     '../supabase/server': { getServiceClient: () => fakeServiceClient },
     './code': codeLib,
+    '../email/affiliate': { notifyReferralRecorded: async () => undefined },
   });
 
   // Self-referral by email is blocked.
@@ -266,4 +268,20 @@ test('password signup succeeds even when referral code is invalid or throws', as
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.match(body.message, /check your inbox/i);
+});
+
+test('email helpers mask referred addresses and never throw without a provider key', async () => {
+  const mail = load('lib/email/resend.ts');
+  assert.equal(mail.maskEmail('maria@gmail.com'), 'm***@gmail.com');
+  assert.equal(mail.escapeHtml('<b>"x"</b>'), '&lt;b&gt;&quot;x&quot;&lt;/b&gt;');
+  delete process.env.RESEND_API_KEY;
+  assert.equal(await mail.sendEmail({ to: 'a@b.co', subject: 's', text: 't' }), false);
+  let body;
+  process.env.RESEND_API_KEY = 're_test';
+  const sent = await load('lib/email/resend.ts', {}, { fetch: async (_u, init) => { body = JSON.parse(init.body); return { ok: true }; } })
+    .sendEmail({ to: 'a@b.co', subject: 's', text: 't' });
+  delete process.env.RESEND_API_KEY;
+  assert.equal(sent, true);
+  assert.match(body.from, /no-reply@taranet\.nz/);
+  assert.deepEqual([...body.to], ['a@b.co']);
 });

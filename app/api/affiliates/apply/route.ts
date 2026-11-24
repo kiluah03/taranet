@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { generateAffiliateCode, normalizeAffiliateCode } from "../../../../lib/affiliates/code";
 import { checkCsrf } from "../../../../lib/auth/csrf";
+import { notifyPartnerApplication } from "../../../../lib/email/affiliate";
 import { getServiceClient } from "../../../../lib/supabase/server";
 
 const applySchema = z.object({
@@ -55,6 +56,10 @@ export async function POST(request: Request) {
       }
       return json({ error: "Could not submit your partner application. Please try again." }, 500);
     }
+
+    try {
+      await notifyPartnerApplication({ name: parsed.data.name, email: parsed.data.email.toLowerCase(), code });
+    } catch { /* Email failures must not fail the application. */ }
 
     return json(
       {
